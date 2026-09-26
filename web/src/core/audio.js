@@ -84,6 +84,8 @@
   // ---- sound library -------------------------------------------------------
   // Each entry is a function(p) where p is a pitch multiplier. Add freely.
   A.sfx = {
+    slime: (p) => { tone({ type: 'sine', f: 240 * p, f2: 80 * p, t: 0.22, vol: 0.25 }); noise({ t: 0.08, vol: 0.12, f: 600 * p }); },
+    whoosh: (p) => noise({ t: 0.35, vol: 0.28, filter: 'bandpass', f: 350 * p, f2: 1500 * p, q: 1 }),
     swing: (p) => noise({ t: 0.12, vol: 0.25, filter: 'bandpass', f: 1800 * p, f2: 600 * p, q: 2 }),
     hit: (p) => { noise({ t: 0.1, vol: 0.4, f: 1200 * p }); tone({ type: 'square', f: 160 * p, f2: 60, t: 0.12, vol: 0.15 }); },
     crit: (p) => { noise({ t: 0.15, vol: 0.5, f: 3000 * p }); tone({ type: 'sawtooth', f: 300 * p, f2: 80, t: 0.2, vol: 0.2 }); },

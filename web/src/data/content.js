@@ -53,14 +53,17 @@
   // a damage shield you have to break, reinforcements, and faster, denser attacks. From phase 2
   // on it also uses a shared nova (ring with a gap) and a sweeping beam. After a while in the
   // fight it ENRAGES. Boss tiers (rematches) and difficulty scale all of this (game/difficulty.js).
+  // cfg: {color, keep, moves:[fn], sig:[fn] (signature moves, used every other cast), move(e, dt, sm, p, d, phase) -> true
+  //       to replace the default walking, tick(e, dt, phase) -> true while a special state runs, phaseText:{2,3,4}, onPhase}
   function bossBrain(cfg) {
-    const extra = [nova(cfg.color), sweep(cfg.color2 || '#ffffff')];
+    const extra = cfg.sig ? [] : [nova(cfg.color), sweep(cfg.color2 || '#ffffff')];
     return function (e, dt, sm) {
       const p = R.World.player;
       if (!p || p.dead) { e.anim = 'idle'; return; }
       R.World.combatT = 3;
       const m = e.mem;
       m.fightT = (m.fightT || 0) + dt;
+      if (cfg.tick && cfg.tick(e, dt, m.phase || 1, sm)) return;
       const f = e.hp / e.maxHp;
       const phase = f < 0.15 ? 4 : f < 0.4 ? 3 : f < 0.7 ? 2 : 1;
       if (phase > (m.phase || 1)) {
@@ -69,7 +72,8 @@
         R.Audio.play('bossRoar'); FX.shake(9, 0.7); FX.flash(cfg.color, 0.35);
         FX.ring(e.x, e.y, 5, 120, cfg.color, 0.7, 7);
         FX.burst(e.x, e.y - 20, { n: 50, colors: [cfg.color, '#ffffff'], speed: 140, life: 0.8, glow: true });
-        R.UI.toast(phase === 4 ? e.def.name + ' is DESPERATE! (Phase 4)' : phase === 3 ? e.def.name + ' goes berserk! (Phase 3)' : e.def.name + ' is enraged! (Phase 2) Break its shield!', 'bad');
+        const pt = cfg.phaseText && cfg.phaseText[phase];
+        R.UI.toast(pt ? `${e.def.name}: "${pt}" (Phase ${phase})` : phase === 4 ? e.def.name + ' is DESPERATE! (Phase 4)' : phase === 3 ? e.def.name + ' goes berserk! (Phase 3)' : e.def.name + ' is enraged! (Phase 2) Break its shield!', 'bad');
         // shockwave pushes you back when a new phase starts
         R.Combat.hitCircle(e.x, e.y, 80, 'enemy', (t) => e.hitPlayer(0.7, { knock: 340 }, t));
         // reinforcements
@@ -94,6 +98,18 @@
       if (m.cd <= 0) {
         const n = phase >= 4 ? 3 : phase >= 3 ? 2 : 1;
         const pool = phase >= 2 ? cfg.moves.concat(extra) : cfg.moves;
+        // signature moves: every other cast, never two at once
+        m.sigTurn = !m.sigTurn;
+        if (cfg.sig && cfg.sig.length && m.sigTurn) {
+          let sg = U.choose(cfg.sig);
+          if (sg === m.lastSig && cfg.sig.length > 1) sg = U.choose(cfg.sig.filter((x) => x !== m.lastSig));
+          m.lastSig = sg;
+          sg(e, p, phase);
+          m.cast = Math.max(m.cast || 0, 0.35);
+          m.cd = ([0, 1.8, 1.4, 1.15, 0.9][phase] + Math.random() * 0.4) * cad;
+          e.anim = 'attack';
+          return;
+        }
         for (let i = 0; i < n; i++) {
           let mv = U.choose(pool);
           if (mv === m.lastMove && pool.length > 1) mv = U.choose(pool); // avoid repeats
@@ -106,6 +122,10 @@
         return;
       }
       const d = U.dist(e.x, e.y, p.x, p.y);
+      if (cfg.move && cfg.move(e, dt, sm, p, d, phase)) {
+        if (d < e.r + 8) { m.touch = (m.touch || 0) - dt; if (m.touch <= 0) { e.hitPlayer(0.9); m.touch = 0.6; } }
+        return;
+      }
       const a = U.angle(e.x, e.y, p.x, p.y) + (d < cfg.keep ? Math.PI * 0.6 : 0.3);
       e.moveAngle(a, e.def.spd * sm * [1, 1, 1.25, 1.45, 1.6][phase] * (m.enraged ? 1.2 : 1), dt);
       e.anim = 'walk';

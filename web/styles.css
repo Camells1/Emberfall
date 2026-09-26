@@ -432,3 +432,78 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
 .mp-adv summary { cursor: pointer; color: var(--dim); font-size: 13px; }
 .mp-adv { display: flex; flex-direction: column; gap: 6px; }
 .mp-adv[open] > * { margin-top: 6px; }
+/* co-op: passwords, giving */
+.mp-pw { display: flex; gap: 6px; align-items: center; }
+.mp-pw .mp-input { flex: 1; }
+.mp-eye { padding: 4px 8px; font-size: 14px; }
+.mp-lbl { font-size: 13px; color: var(--dim); margin-bottom: -4px; } .mp-lbl small { opacity: .8; }
+.mp-lbl.need { color: #ffd060; font-weight: bold; font-size: 14px; animation: pop .3s; }
+.mp-pwrow { flex-wrap: wrap; } .mp-pwrow .mp-pw { flex: 1; min-width: 200px; }
+.mp-pwstate { font-size: 13px; color: var(--dim); min-width: 120px; }
+.mp-member { display: flex; align-items: center; gap: 8px; } .mp-member .btn { margin-left: auto; }
+.give-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; color: var(--dim); }
+.give-row b { color: #80ffb0; }
+.give-gold { width: 80px !important; font-size: 14px !important; padding: 3px 6px !important; }
+.xh-prev { display: flex; align-items: center; gap: 8px; min-width: 200px; justify-content: center; }
+.xh-prev canvas { image-rendering: pixelated; width: 54px; height: 54px; background: repeating-conic-gradient(#3a5a2a 0 25%, #4a6a3a 0 50%) 0 0 / 18px 18px; border-radius: 6px; }
+.xh-cols { display: flex; gap: 5px; flex-wrap: wrap; }
+.xh-cols .sw.none { background: linear-gradient(135deg, #ff80c0, #ffd040, #60e0ff); color: #140c1c; font-size: 13px; text-align: center; line-height: 22px; }
+/* enchanted gear */
+.bag-slot.ench, .eq-slot.ench { box-shadow: 0 0 0 1px #b080ff, 0 0 10px rgba(176,128,255,.55) inset; animation: enchglow 2.2s ease-in-out infinite; }
+@keyframes enchglow { 50% { box-shadow: 0 0 0 1px #d0a0ff, 0 0 16px rgba(200,150,255,.8) inset; } }
+.tt-ench { font: bold 15px var(--serif); margin-top: 4px; text-shadow: 0 0 6px currentColor; }
+.tt-line.ench { color: #d8c0ff; padding-left: 12px; }
+/* crafting */
+.cr-frame { width: 860px; max-height: 92vh; display: flex; flex-direction: column; }
+.cr-pane { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
+.cr-warn { background: rgba(255,200,80,.1); border-left: 3px solid var(--gold); padding: 6px 10px; font-size: 14px; border-radius: 4px; }
+.cr-row { display: flex; align-items: center; gap: 10px; padding: 5px 10px; background: var(--panel2); border: 2px solid #3a2e48; border-radius: 6px; }
+.cr-row.big { border-color: var(--gold-d); padding: 10px; }
+.cr-row.locked { opacity: .5; }
+.cr-name { flex: 1; display: flex; flex-direction: column; font-size: 15px; } .cr-name small { color: var(--dim); font-size: 12px; } .cr-name small.bad { color: var(--bad); }
+.cr-mats { display: flex; flex-wrap: wrap; gap: 4px; max-width: 360px; justify-content: flex-end; }
+.cr-mat { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,.3); cursor: help; white-space: nowrap; }
+.cr-mat.ok { color: #a0ffa0; } .cr-mat.no { color: #ff9090; }
+.cr-btns { display: flex; gap: 4px; }
+.cr-tiers { display: flex; gap: 4px; flex-wrap: wrap; } .cr-tiers .tab.dim { opacity: .5; }
+.cr-forge { display: flex; flex-wrap: wrap; gap: 5px; }
+.cr-forge .bag-slot.sel { outline: 3px solid var(--gold); }
+.cr-forge .qty.eqd { color: #80ffb0; }
+.cr-mw { font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 4px; } .cr-mw b { color: var(--gold); }
+.cr-enchs { display: flex; flex-wrap: wrap; gap: 5px; }
+.cr-ench { display: flex; flex-direction: column; align-items: flex-start; min-width: 150px; } .cr-ench small { font-size: 11px; color: var(--dim); font-weight: normal; }
+.cr-ench.sel { outline: 2px solid var(--gold); }
+.cr-gold { margin-top: 6px; }
+/* skill bar & trainers */
+.skills-frame .skill-list { max-height: 44vh; overflow-y: auto; }
+.sb-bar { display: flex; gap: 10px; }
+.sb-slot { position: relative; flex: 1; height: 78px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--panel2); border: 2px solid var(--gold-d); border-radius: 8px; cursor: pointer; }
+.sb-slot canvas { width: 40px; height: 40px; }
+.sb-slot.locked { opacity: .5; cursor: default; }
+.sb-slot.target { border-color: #80ffb0; box-shadow: 0 0 12px rgba(128,255,176,.5); animation: pop .3s; }
+.sb-key { position: absolute; left: 6px; top: 3px; font: bold 13px var(--font); color: var(--gold); }
+.sb-name { font-size: 12px; } .sb-lock { font-size: 12px; color: var(--dim); }
+.sb-pick { color: #80ffb0; font-size: 14px; }
+.skill-row.picking { border-color: #80ffb0; }
+.skill-row.known { opacity: .75; }
+.sb-btns { display: flex; flex-direction: column; gap: 4px; }
+.sb-known { color: #80ffb0; font-weight: bold; white-space: nowrap; } .sb-known.locked { color: var(--dim); }
+.sb-unknown { display: flex; flex-wrap: wrap; gap: 6px; }
+.sb-u { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; background: rgba(0,0,0,.25); border: 1px solid #4a3a5a; border-radius: 6px; opacity: .8; }
+.sb-u span { display: flex; flex-direction: column; font-size: 13px; } .sb-u small { color: var(--dim); font-size: 11px; }
+.sb-u canvas { width: 28px; height: 28px; }
+/* stable */
+.stable-frame { width: 900px; max-height: 92vh; overflow-y: auto; }
+.stb-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.stb-card { width: 150px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; background: var(--panel2); border: 2px solid #4a3a5a; border-radius: 8px; text-align: center; }
+.stb-card canvas { image-rendering: pixelated; }
+.stb-card.missing canvas { filter: brightness(0) opacity(.45); }
+.stb-card.active { border-color: #80ffb0; box-shadow: 0 0 10px rgba(128,255,176,.4); }
+.stb-name { font-size: 13px; font-weight: bold; display: flex; flex-direction: column; } .stb-name small { color: #80ffb0; font-weight: normal; }
+.stb-tag { font-size: 11px; color: #80ffb0; } .stb-tag.dim { color: var(--dim); }
+/* admin panel */
+.admin-frame { width: 880px; max-height: 92vh; overflow-y: auto; }
+.adm-code { display: flex; align-items: center; gap: 10px; background: rgba(255,200,80,.08); border: 2px solid var(--gold-d); border-radius: 8px; padding: 8px 12px; }
+.adm-code b { color: var(--gold); } .adm-code small { color: var(--dim); flex: 1; } .adm-code input { width: 200px; }
+.adm-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-grid .btn b { color: #80ffb0; }

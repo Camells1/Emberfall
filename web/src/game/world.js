@@ -121,7 +121,7 @@
     };
     M.npc = (nid, x, y) => { M.npcs.push({ id: nid, x: x * S + 8, y: y * S + 12 }); M.reserve(x | 0, y | 0, 1, 1); };
     // Enemy group. opts {count, radius (tiles), level, respawn (sec, 0 = never), elite}
-    M.spawn = (eid, x, y, o) => { o = o || {}; M.spawns.push({ id: eid, x: x * S + 8, y: y * S + 8, count: o.count || 1, radius: (o.radius || 2) * S, level: o.level, respawn: o.respawn == null ? 60 : o.respawn, elite: o.elite, critter: o.critter }); };
+    M.spawn = (eid, x, y, o) => { o = o || {}; M.spawns.push({ id: eid, x: x * S + 8, y: y * S + 8, count: o.count || 1, radius: (o.radius || 2) * S, level: o.level, respawn: o.respawn == null ? 60 : o.respawn, elite: o.elite, critter: o.critter, wild: o.wild }); };
     // Boss (spawned only while undefeated). opts {flag, level, onDefeat}
     M.boss = (eid, x, y, o) => { o = o || {}; M.bosses.push({ id: eid, x: x * S + 8, y: y * S + 8, flag: o.flag || 'boss:' + eid, level: o.level, requires: o.requires }); };
     // Chest; id must be unique game-wide. opts {loot:[itemId|{item,qty}], gold, tier:'wood'|'iron'|'gold'}
@@ -138,6 +138,7 @@
     M.waypoint = (wid, x, y, name) => { M.prop('portal', x, y, 0); M.waypoints.push({ id: wid, x: x * S + 8, y: y * S + 15, name: name || def.name }); M.point('wp:' + wid, x, y + 1); };
     // Custom interactable. o: {x, y (tiles), label, r, fn()}
     M.interact = (o) => M.extras.push(Object.assign({}, o, { x: o.x * S + 8, y: o.y * S + 12 }));
+    if (R.Crafting) R.Crafting.extendBuilder(M); // M.node (gathering) and M.station (crafting)
 
     // ---- cliffs & plateaus ---------------------------------------------------------
     // Raise every tile where inside(x, y) is true into a plateau of `top` tiles. The ground just
@@ -186,13 +187,46 @@
   // ==========================================================================
   const built = {}; // cache of built map geometry (tiles, props, ground canvas) per map id
 
+  // Ground layer drawn in chunks on demand (a 300x300-tile map would be a 100 MB image otherwise).
+  const CH = 16, chunkCache = new Map(), CHUNK_MAX = 90;
+  function makeGround(M) {
+    const cols = Math.ceil(M.w / CH), rows = Math.ceil(M.h / CH), src = { id: M.id, w: M.w, h: M.h, tiles: M.tiles };
+    const get = (cx, cy, now) => {
+      const key = M.id + ':' + cx + ',' + cy;
+      let c = chunkCache.get(key);
+      if (c) { chunkCache.delete(key); chunkCache.set(key, c); return c; } // most recently used goes last
+      if (!now) return null;
+      c = T.renderRegion(src, cx * CH, cy * CH, CH, CH);
+      chunkCache.set(key, c);
+      if (chunkCache.size > CHUNK_MAX) chunkCache.delete(chunkCache.keys().next().value);
+      return c;
+    };
+    return {
+      width: M.w * S, height: M.h * S,
+      // draw the ground covering world rect (x, y, w, h)
+      draw(ctx, x, y, w, h) {
+        const PX = CH * S;
+        const c0 = Math.max(0, Math.floor(x / PX)), c1 = Math.min(cols - 1, Math.floor((x + w) / PX));
+        const r0 = Math.max(0, Math.floor(y / PX)), r1 = Math.min(rows - 1, Math.floor((y + h) / PX));
+        for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) ctx.drawImage(get(cx, cy, true), cx * PX, cy * PX);
+      },
+      // render a few chunks around the view ahead of time, so walking never hitches
+      prefetch(x, y, w, h, budget) {
+        const PX = CH * S;
+        const c0 = Math.max(0, Math.floor(x / PX) - 1), c1 = Math.min(cols - 1, Math.floor((x + w) / PX) + 1);
+        const r0 = Math.max(0, Math.floor(y / PX) - 1), r1 = Math.min(rows - 1, Math.floor((y + h) / PX) + 1);
+        for (let cy = r0; cy <= r1 && budget > 0; cy++) for (let cx = c0; cx <= c1 && budget > 0; cx++) if (!get(cx, cy, false)) { get(cx, cy, true); budget--; }
+      },
+    };
+  }
+
   function buildMap(id) {
     if (built[id]) return built[id];
     const def = R.Maps[id];
     if (!def) throw new Error('Unknown map: ' + id);
     const M = makeBuilder(def, id);
     def.build(M);
-    M.ground = T.render({ id, w: M.w, h: M.h, tiles: M.tiles });
+    M.ground = makeGround(M);
     // solid grid
     M.solid = new Uint8Array(M.w * M.h);
     M.sight = new Uint8Array(M.w * M.h);
@@ -262,15 +296,9 @@
     for (const c of M.chests) { if (c.requires && !c.requires()) continue; W.add(new R.Chest(c)); }
     // enemy groups
     W.spawns = M.spawns.map((s) => Object.assign({}, s, { alive: [], timer: 0 }));
-    const coopGuest = R.Net && R.Net.isClient(); // in someone else's game, their monsters are the real ones
-    if (!coopGuest) for (const s of W.spawns) if (!def.safe || s.critter) fillSpawn(s, true);
-    // bosses (beaten ones leave a Challenge Sigil for a harder rematch)
-    for (const b of coopGuest ? [] : M.bosses) {
-      if (W.flags[b.flag]) { if (R.BossSigil && (!b.requires || b.requires())) W.add(new R.BossSigil(b)); continue; }
-      if (b.requires && !b.requires()) continue;
-      const e = W.spawnEnemy(b.id, b.x, b.y, b.level);
-      if (e) { e.bossFlag = b.flag; e.state = 'idle'; e.popIn = 0; }
-    }
+    // co-op: if another player already runs this area, their monsters are the real ones
+    if (!R.Net || R.Net.claimMap()) W.populate();
+    else for (const b of M.bosses) if (W.flags[b.flag] && R.BossSigil && (!b.requires || b.requires())) W.add(new R.BossSigil(b));
     // interactables: signs, waypoints, extras
     for (const s of M.signs) W.interactables.push({ x: s.x, y: s.y, r: 18, label: 'Read', fn: () => R.UI.dialog([{ speaker: 'Sign', text: s.text }]) });
     for (const wp of M.waypoints) {
@@ -289,10 +317,29 @@
     if (R.Net) R.Net.onLoad();
   };
 
+  // Spawn the area's monsters and bosses (beaten bosses leave a Challenge Sigil for a harder rematch).
+  W.populate = function () {
+    const M = W.map, def = M.def;
+    for (const s of W.spawns) if ((!def.safe || s.critter || s.wild) && W.spawnActive(s)) fillSpawn(s, true);
+    for (const b of M.bosses) {
+      if (W.flags[b.flag]) { if (R.BossSigil && (!b.requires || b.requires()) && !W.entities.some((e) => e instanceof R.BossSigil && e.b === b)) W.add(new R.BossSigil(b)); continue; }
+      if (b.requires && !b.requires()) continue;
+      const e = W.spawnEnemy(b.id, b.x, b.y, b.level);
+      if (e) { e.bossFlag = b.flag; e.state = 'idle'; e.popIn = 0; }
+    }
+  };
+  // Big maps: monster groups only exist near a player (they appear as you approach).
+  const ACTIVE_R = 44 * 16, SLEEP_R = 58 * 16;
+  W.spawnActive = function (s) {
+    if (!W.player) return true;
+    for (const q of (R.Net && R.Net.active() ? R.Net.players() : [W.player])) if (Math.abs(q.x - s.x) < ACTIVE_R && Math.abs(q.y - s.y) < ACTIVE_R) return true;
+    return false;
+  };
   function fillSpawn(s, initial) {
     const def = R.Enemies[s.id];
     if (!def) { console.warn('unknown enemy', s.id); return; }
     s.alive = s.alive.filter((e) => !e.dead);
+    s.filled = true;
     while (s.alive.length < s.count) {
       let x, y, tries = 20;
       do { x = s.x + U.rand(-s.radius, s.radius); y = s.y + U.rand(-s.radius, s.radius); } while (tries-- > 0 && W.collides(x, y, def.r || 6));
@@ -351,6 +398,9 @@
     }
     return false;
   };
+  const NUDGE = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7];
+  const ROADS = new Set(['path', 'cobble', 'stonebridge', 'snowpath', 'sandstone', 'mossstone', 'planks', 'bridge']);
+  W.onRoad = (x, y) => ROADS.has(W.tileAt(x, y - 2));
   // Moves with sliding; returns true if moved at all.
   W.moveEntity = function (e, dx, dy) {
     const flying = e.def && e.def.tags && e.def.tags.includes('flying');
@@ -362,13 +412,13 @@
       if (sx) {
         if (!W.collides(e.x + sx, e.y, r, flying)) { e.x += sx; moved = true; }
         else if (!sy) { // corner slide
-          for (const n of [1, -1, 2, -2, 3, -3]) if (!W.collides(e.x + sx, e.y + n, r, flying) && !W.collides(e.x, e.y + n, r, flying)) { e.y += n > 0 ? 1 : -1; moved = true; break; }
+          for (const n of NUDGE) if (!W.collides(e.x + sx, e.y + n, r, flying) && !W.collides(e.x, e.y + n, r, flying)) { const k = Math.min(Math.abs(n), Math.max(1, Math.abs(sx) * 0.8)); if (!W.collides(e.x, e.y + Math.sign(n) * k, r, flying)) e.y += Math.sign(n) * k; else e.y += Math.sign(n); moved = true; break; }
         }
       }
       if (sy) {
         if (!W.collides(e.x, e.y + sy, r, flying)) { e.y += sy; moved = true; }
         else if (!sx) {
-          for (const n of [1, -1, 2, -2, 3, -3]) if (!W.collides(e.x + n, e.y + sy, r, flying) && !W.collides(e.x + n, e.y, r, flying)) { e.x += n > 0 ? 1 : -1; moved = true; break; }
+          for (const n of NUDGE) if (!W.collides(e.x + n, e.y + sy, r, flying) && !W.collides(e.x + n, e.y, r, flying)) { const k = Math.min(Math.abs(n), Math.max(1, Math.abs(sy) * 0.8)); if (!W.collides(e.x + Math.sign(n) * k, e.y, r, flying)) e.x += Math.sign(n) * k; else e.x += Math.sign(n); moved = true; break; }
         }
       }
     }
@@ -504,13 +554,27 @@
     }
     // respawns
     const p = W.player;
-    if (!(R.Net && R.Net.isClient())) for (const s of W.spawns) {
-      if (!s.respawn || (W.def.safe && !s.critter)) continue;
-      s.alive = s.alive.filter((e) => !e.dead);
-      if (s.alive.length < s.count) {
-        s.timer += dt;
-        if (s.timer > s.respawn && U.dist(p.x, p.y, s.x, s.y) > 240) { s.timer = 0; fillSpawn(s); }
-      } else s.timer = 0;
+    if (!(R.Net && R.Net.active() && !R.Net.authority)) {
+      W.spawnT = (W.spawnT || 0) - dt;
+      const scan = W.spawnT <= 0;
+      if (scan) W.spawnT = 0.5;
+      for (const s of W.spawns) {
+        if (W.def.safe && !s.critter && !s.wild) continue;
+        s.alive = s.alive.filter((e) => !e.dead && !e.remove);
+        if (scan) {
+          const active = W.spawnActive(s);
+          if (!active && s.alive.length && !s.alive.some((e) => e.state === 'chase' || e.state === 'attack' || e.hp < e.maxHp)) {
+            // far from everyone and not fighting: tidy it away until someone comes back
+            if (!s.alive.some((e) => U.dist(e.x, e.y, p.x, p.y) < SLEEP_R)) { for (const e of s.alive) e.remove = true; s.alive = []; s.slept = true; }
+          } else if (active && s.slept) { s.slept = false; fillSpawn(s, true); }
+          else if (active && !s.filled) fillSpawn(s, true); // first visit
+        }
+        if (!s.respawn || !s.filled) continue;
+        if (s.alive.length < s.count && !s.slept) {
+          s.timer += dt;
+          if (s.timer > s.respawn && U.dist(p.x, p.y, s.x, s.y) > 240) { s.timer = 0; fillSpawn(s); }
+        } else s.timer = 0;
+      }
     }
     // bosses: detect engagement
     if (!W.boss) {
@@ -547,8 +611,10 @@
     }
     // camera
     const tx = p.x - G.W / 2 + Math.cos(p.aim) * 12, ty = p.y - 12 - G.H / 2 + Math.sin(p.aim) * 8;
-    W.cam.x = U.lerp(W.cam.x, tx, Math.min(1, dt * 6));
-    W.cam.y = U.lerp(W.cam.y, ty, Math.min(1, dt * 6));
+    W.cam.x = U.lerp(W.cam.x, tx, Math.min(1, dt * 9));
+    W.cam.y = U.lerp(W.cam.y, ty, Math.min(1, dt * 9));
+    if (Math.abs(W.cam.x - tx) < 0.35) W.cam.x = tx;
+    if (Math.abs(W.cam.y - ty) < 0.35) W.cam.y = ty;
     clampCam();
     FX.update(dt);
     updateWeather(dt);
@@ -720,9 +786,8 @@
     ctx.save();
     ctx.translate(-cx, -cy);
     // ground
-    const gx = Math.max(0, cx), gy = Math.max(0, cy);
-    const gw = Math.min(M.ground.width - gx, G.W + 2), gh = Math.min(M.ground.height - gy, G.H + 2);
-    if (gw > 0 && gh > 0) ctx.drawImage(M.ground, gx, gy, gw, gh, gx, gy, gw, gh);
+    M.ground.draw(ctx, cx, cy, G.W + 2, G.H + 2);
+    M.ground.prefetch(cx, cy, G.W, G.H, 1);
     drawAnimatedTiles(ctx, cx, cy);
     // exits glow
     for (const x of M.exits) if (x.glow !== false && !x.hidden) {

@@ -28,7 +28,7 @@
   // Bosses use it so over-geared heroes still get a real fight.
   D.playerDps = function (p) {
     if (!p || !p.stats) return 0;
-    const s = p.stats, wt = p.weaponType(), w = p.weapon(), eff = (w && w.effect) || {};
+    const s = p.stats, wt = p.weaponType(), w = p.weapon(), eff = p.weaponEffect ? p.weaponEffect() : (w && w.effect) || {};
     const base = wt.kind === 'magic' ? s.mag : s.atk;
     const aps = (1 + (s.atkSpd || 0)) / (wt.cd || 0.5);
     const shots = (eff.multishot || 1) * (wt.pierce || eff.pierce ? 1.1 : 1);

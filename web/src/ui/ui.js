@@ -290,6 +290,7 @@
       if (!v && !d) continue;
       h += `<div class="tt-line">${v ? `<b>${UI.fmtStat(k, v)}</b> ${STAT_NAMES[k] || k}` : `<span class="dim">${STAT_NAMES[k] || k}</span>`}${d ? ` <span class="${d > 0 ? 'up' : 'down'}">(${UI.fmtStat(k, d)})</span>` : ''}</div>`;
     }
+    if (opts.ench && R.Crafting) h += R.Crafting.tipHTML(opts.ench, it);
     if (it.effect) {
       const e = it.effect, fx = [];
       if (e.burn) fx.push(`Burns for ${e.burn}/s`); if (e.poison) fx.push(`Poisons for ${e.poison}/s`); if (e.freeze) fx.push('Chance to freeze'); if (e.slow) fx.push('Slows enemies');

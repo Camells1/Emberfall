@@ -117,7 +117,7 @@
       if (FX.stop > 0) { FX.stop -= dt; }
       else if (!paused) {
         if (R.Net) R.Net.capture = R.Net.active(); // co-op: share this frame's effects
-        try { W.update(dt); } finally { if (R.Net) R.Net.capture = false; }
+        try { W.update(dt); R.events.emit('tick', dt); } finally { if (R.Net) R.Net.capture = false; }
         R.playtime += dt;
       }
       if (R.Net) R.Net.tick(dt);
@@ -152,7 +152,7 @@
     const cx = Math.round((Math.sin(tbg.t * 0.03) * 0.5 + 0.5) * maxX), cy = Math.round((Math.cos(tbg.t * 0.021) * 0.5 + 0.5) * maxY);
     bctx.fillStyle = '#000'; bctx.fillRect(0, 0, G.W, G.H);
     bctx.save(); bctx.translate(-cx, -cy);
-    bctx.drawImage(M.ground, cx, cy, G.W, G.H, cx, cy, G.W, G.H);
+    M.ground.draw(bctx, cx, cy, G.W, G.H);
     const vis = M.props.filter((p) => p.x > cx - 60 && p.x < cx + G.W + 60 && p.y > cy - 10 && p.y < cy + G.H + 80).sort((a, b) => a.y - b.y);
     for (const p of vis) { const d = R.Props[p.id]; const spr = R.Props.sprite(p.id, p.v, d.anim ? Math.floor(tbg.t * 6) % d.anim : 0); bctx.drawImage(spr, Math.round(p.x - d.ax - 1), Math.round(p.y - d.ay - 1)); }
     bctx.restore();
@@ -215,6 +215,8 @@
     // saves from before a map grew to the west/north: shift the position to match
     const off = R.MapOffsets && R.MapOffsets[map];
     if (off && data.map && (data.layout || 1) < 2) { data.x += off.ox * 16; data.y += off.oy * 16; }
+    const off3 = R.MapOffsets3 && R.MapOffsets3[map]; // the wilds (v1.4): the old map now sits inside a bigger one
+    if (off3 && data.map && (data.layout || 1) < 3) { data.x += off3.ox * 16; data.y += off3.oy * 16; }
     W.load(map, data.map ? { x: data.x, y: data.y } : 'start');
     if (!W.waypoints.town) W.waypoints.town = { map: 'town', name: 'Havenbrook' };
     UI.resetHUD();

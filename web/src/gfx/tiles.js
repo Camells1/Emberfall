@@ -216,14 +216,18 @@
   T.stonebridge = { color: '#5a5460', pri: 7, draw(P, r) { P.rect(0, 0, 16, 16, '#5a5460'); for (let y = 0; y < 16; y += 4) P.rect(0, y, 16, 1, '#46404c'); P.speckle(0, 0, 16, 16, '#6a6470', 10, r); P.rect(0, 0, 2, 16, '#3a3440'); P.rect(14, 0, 2, 16, '#3a3440'); } };
   T.tilefloor = { color: '#b8a888', pri: 5, draw(P, r, x, y) { const c = (x + y) % 2 ? '#b8a888' : '#a89878'; P.rect(0, 0, 16, 16, c); P.rect(0, 0, 16, 1, U.shade(c, 0.15)); P.rect(0, 15, 16, 1, U.shade(c, -0.2)); P.speckle(0, 0, 16, 16, U.shade(c, -0.1), 6, r); } };
 
-  // Pre-render a whole tile layer to one big canvas, with dithered edges between tiles.
-  T.render = function (map) {
+  // Pre-render part of a tile layer (tiles x0..x0+rw, y0..y0+rh) to a canvas, with dithered edges
+  // between tiles. Big maps are drawn in chunks like this as you walk around (see world.js).
+  T.render = function (map) { return T.renderRegion(map, 0, 0, map.w, map.h); };
+  T.renderRegion = function (map, x0, y0, rw, rh) {
     const S = G.TILE;
-    const cv = G.canvas(map.w * S, map.h * S);
+    rw = Math.min(rw, map.w - x0); rh = Math.min(rh, map.h - y0);
+    const cv = G.canvas(rw * S, rh * S);
     const ctx = cv.getContext('2d');
     const P = G.painter(ctx);
-    const rng = U.rng('tiles:' + map.id);
-    for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) {
+    const rng = U.rng('tiles:' + map.id + ':' + x0 + ',' + y0);
+    ctx.translate(-x0 * S, -y0 * S);
+    for (let y = y0; y < y0 + rh; y++) for (let x = x0; x < x0 + rw; x++) {
       const id = map.tiles[y * map.w + x];
       const t = T[id] || T.grass;
       ctx.save(); ctx.translate(x * S, y * S);
@@ -231,7 +235,7 @@
       ctx.restore();
     }
     // edges: higher-priority neighbour bleeds jagged pixels into lower tiles
-    for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) {
+    for (let y = y0; y < y0 + rh; y++) for (let x = x0; x < x0 + rw; x++) {
       const id = map.tiles[y * map.w + x], t = T[id] || T.grass;
       const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]];
       for (const [dx, dy] of nb) {

@@ -23,6 +23,13 @@
         if (!it) continue;
         for (const k in it.stats) g[k] = (g[k] || 0) + it.stats[k];
       }
+      // enchantments
+      if (pl.ench && R.Crafting) for (const slot of R.SLOTS) {
+        const en = pl.ench[slot], it = en && R.Items[pl.equip[slot]];
+        if (!it) continue;
+        const st = R.Crafting.stats(en, it);
+        for (const k in st) g[k] = (g[k] || 0) + st[k];
+      }
       // set bonuses
       if (R.ItemSets) {
         const counts = {};
@@ -66,7 +73,7 @@
       s.maxHp += rb.hp || 0; s.maxMp += rb.mp || 0; s.def += rb.def || 0;
       s.crit = Math.min(75, s.crit + (rb.crit || 0)); s.spd = Math.min(1.8, s.spd + (rb.spd || 0));
       s.hpRegen += rb.hpRegen || 0; s.mpRegen += rb.mpRegen || 0; s.lifesteal += rb.lifesteal || 0;
-      s.dodge = Math.min(40, s.dodge + (rb.dodge || 0)); s.critDmg += rb.critDmg || 0;
+      s.dodge = Math.min(40, s.dodge + (rb.dodge || 0)); s.critDmg += rb.critDmg || 0; s.cdr = Math.min(0.4, s.cdr + (rb.cdr || 0));
       // buffs
       if (pl.buffs) for (const b of pl.buffs) {
         if (b.stat in s) s[b.stat] = b.mult ? s[b.stat] * (1 + b.amt) : s[b.stat] + b.amt;
@@ -118,7 +125,7 @@
     if (o.knock && t.knockResist !== 1) {
       const a = o.angle != null ? o.angle : (o.source ? U.angle(o.source.x, o.source.y, t.x, t.y) : 0);
       const f = o.knock * (1 - (t.knockResist || 0));
-      t.kx += Math.cos(a) * f; t.ky += Math.sin(a) * f;
+      if (!(t.ironSkinT > 0)) { t.kx += Math.cos(a) * f; t.ky += Math.sin(a) * f; }
     }
     if (o.status) C.applyStatus(t, o.status);
     // feedback
@@ -171,7 +178,9 @@
       let s = st[k];
       if (!s) continue;
       if (t.immune && t.immune.includes(k)) continue;
+      if (rb[k + 'Resist'] >= 1) continue; // immune (e.g. the Forged vs poison)
       if (rb[k + 'Resist'] && s.dps) s = Object.assign({}, s, { dps: s.dps * (1 - rb[k + 'Resist']) });
+      else if (rb[k + 'Resist'] && s.dur) s = Object.assign({}, s, { dur: s.dur * (1 - rb[k + 'Resist']) });
       const cur = t.status[k];
       if (!cur || (s.dur || 0) > cur.t || (s.dps || 0) > (cur.dps || 0)) t.status[k] = { t: s.dur || 2, dps: s.dps || 0, amt: s.amt || 0, tick: 0, src: s.src };
     }
@@ -220,7 +229,7 @@
     if (team === 'none') return []; // harmless visual projectiles (other players' shots)
     const me = W.localPlayer || W.player;
     const list = me && !me.dead ? [me] : [];
-    if (R.Net && R.Net.isHost()) for (const p of R.Net.peers.values()) if (p.ent && !p.ent.remove && !p.ent.dead) list.push(p.ent);
+    if (R.Net && R.Net.authority) for (const p of R.Net.peers.values()) if (p.ent && !p.ent.remove && !p.ent.dead) list.push(p.ent);
     return list;
   };
   C.eachHostile = function (team, fn) { for (const e of C.hostiles(team).slice()) if (!e.dead && !e.untargetable) fn(e); };

@@ -48,7 +48,10 @@
       this.attrPoints = d.attrPoints || 0;
       this.skillPoints = d.skillPoints || 0;
       this.skillLv = d.skillLv || {};
+      this.learned = d.learned || []; // extra skills learned from trainers and quests
+      this.mounts = d.mounts || []; this.pets = d.pets || []; this.mount = d.mount || null; this.pet = d.pet || null; this.riding = false;
       this.equip = d.equip || {};
+      this.ench = d.ench || {}; // enchantments on equipped gear, by slot: {id, lv}
       this.inv = d.inv || [];
       this.gold = d.gold || 0;
       this.hotbar = d.hotbar || null; // skill ids by slot (null = class default order)
@@ -81,6 +84,14 @@
       return { head: L('head'), chest: L('chest'), legs: L('legs'), feet: L('feet'), hands: L('hands'), cape: L('cape'), offhand: off && off.slot === 'offhand' && !off.type ? off.look : undefined };
     }
     weapon() { return R.Items[this.equip.weapon]; }
+    // the weapon's on-hit effects, plus its enchantment's
+    weaponEffect() {
+      const w = this.weapon(), en = this.ench && this.ench.weapon;
+      if (!en || !R.Crafting) return (w && w.effect) || {};
+      const e = Object.assign({}, (w && w.effect) || {}), x = R.Crafting.effect(en, w);
+      for (const k in x) e[k] = typeof x[k] === 'number' && typeof e[k] === 'number' ? e[k] + x[k] : x[k];
+      return e;
+    }
     weaponType() { const w = this.weapon(); return w ? R.WeaponTypes[w.type] : { kind: 'melee', arc: 1.6, range: 18, dur: 0.2, cd: 0.35, mult: 0.6, knock: 40 }; }
 
     skills() {
@@ -102,6 +113,15 @@
         for (let i = 0; i < qty; i++) this.inv.push({ id, qty: 1 });
       }
       R.events.emit('pickup', { item: id, qty });
+      return true;
+    }
+    // Add an inventory entry as-is (keeps enchantments on gear).
+    addEntry(e) {
+      const it = e && R.Items[e.id];
+      if (!it) return false;
+      if (it.stack || !e.ench) return this.addItem(e.id, e.qty || 1);
+      this.inv.push({ id: e.id, qty: 1, ench: { id: e.ench.id, lv: e.ench.lv } });
+      R.events.emit('pickup', { item: e.id, qty: 1 });
       return true;
     }
     removeItem(id, qty) {
@@ -148,14 +168,15 @@
       const it = R.Items[s.id];
       if (this.equipReason(it)) { R.UI && R.UI.toast(this.equipReason(it), 'bad'); R.Audio.play('error'); return false; }
       const slot = it.slot;
-      const prev = this.equip[slot];
+      const prev = this.equip[slot], prevEnch = this.ench[slot];
       this.inv.splice(invIndex, 1);
-      if (prev) this.inv.splice(invIndex, 0, { id: prev, qty: 1 });
+      if (prev) this.inv.splice(invIndex, 0, prevEnch ? { id: prev, qty: 1, ench: prevEnch } : { id: prev, qty: 1 });
       this.equip[slot] = s.id;
+      if (s.ench) this.ench[slot] = s.ench; else delete this.ench[slot];
       // two-handed weapon: drop the off-hand into the bag
       if (slot === 'weapon' && R.WeaponTypes[it.type] && R.WeaponTypes[it.type].twoHanded && this.equip.offhand) {
-        this.inv.push({ id: this.equip.offhand, qty: 1 });
-        delete this.equip.offhand;
+        this.inv.push(this.ench.offhand ? { id: this.equip.offhand, qty: 1, ench: this.ench.offhand } : { id: this.equip.offhand, qty: 1 });
+        delete this.equip.offhand; delete this.ench.offhand;
       }
       this.recalc();
       R.Audio.play('equip');
@@ -167,7 +188,8 @@
       if (!id) return;
       if (slot === 'weapon') { R.UI && R.UI.toast('You need a weapon equipped', 'bad'); return; }
       delete this.equip[slot];
-      this.inv.push({ id, qty: 1 });
+      this.inv.push(this.ench[slot] ? { id, qty: 1, ench: this.ench[slot] } : { id, qty: 1 });
+      delete this.ench[slot];
       this.recalc();
       R.Audio.play('equip');
     }
@@ -231,7 +253,7 @@
       FX.text(this.x, this.y - 40, 'LEVEL UP!', '#ffd040', { big: true, life: 1.6 });
       R.UI && R.UI.toast('Level ' + this.level + '! +3 attribute points, +1 skill point', 'good');
       // auto-learn newly unlocked skill slot at level 1
-      const sk = this.skills();
+      const sk = R.Classes[this.cls].skills;
       R.SKILL_UNLOCK.forEach((lv, i) => { if (this.level >= lv && sk[i] && !this.skillLv[sk[i]]) { this.skillLv[sk[i]] = 1; R.UI && R.UI.toast('New skill: ' + R.Skills[sk[i]].name, 'good'); } });
       R.events.emit('levelup', { level: this.level });
     }
@@ -257,6 +279,8 @@
       this.mp = Math.min(this.stats.maxMp, this.mp + this.stats.mpRegen * dt * (inCombat ? 1 : 2));
       // timers
       this.atkCd -= dt; this.rollCd -= dt; this.potionCd -= dt; this.comboT -= dt;
+      if (this.dodgeBuf > 0) { this.dodgeBuf -= dt; if (Input.hit('dodge')) this.dodgeBuf = 0.2; }
+      if (this.ironSkinT > 0) this.ironSkinT -= dt;
       for (const k in this.skillCd) this.skillCd[k] -= dt;
       if (this.castT > 0) this.castT -= dt;
 
@@ -294,10 +318,16 @@
         this.anim = 'roll'; this.frame = 0;
       } else {
         // attacking slows you down
-        const atkSlow = this.atkT > 0 ? 0.45 : this.castT > 0 ? 0.3 : 1;
-        const speed = 78 * this.stats.spd * sm * atkSlow * (this.sprinting ? 1.5 : 1);
-        this.vx = U.lerp(this.vx, mv.x * speed, Math.min(1, dt * 14));
-        this.vy = U.lerp(this.vy, mv.y * speed, Math.min(1, dt * 14));
+        const wk = this.weaponType().kind;
+        const atkSlow = this.atkT > 0 ? (wk === 'melee' || wk === 'thrust' ? 0.62 : 0.78) : this.castT > 0 ? 0.5 : 1;
+        const road = W.onRoad && W.onRoad(this.x, this.y) ? 1.15 : 1; // roads and trails are quicker to travel
+        const speed = 78 * this.stats.spd * sm * atkSlow * road * (this.sprinting ? 1.5 : 1);
+        // accelerate quickly, stop even quicker (no ice-skating)
+        const accel = (mv.x || mv.y) ? 20 : 28;
+        this.vx = U.lerp(this.vx, mv.x * speed, Math.min(1, dt * accel));
+        this.vy = U.lerp(this.vy, mv.y * speed, Math.min(1, dt * accel));
+        if (!mv.x && Math.abs(this.vx) < 2) this.vx = 0;
+        if (!mv.y && Math.abs(this.vy) < 2) this.vy = 0;
         W.moveEntity(this, this.vx * dt + this.kx * dt, this.vy * dt + this.ky * dt);
         this.kx *= Math.pow(0.001, dt); this.ky *= Math.pow(0.001, dt);
         const moving = Math.hypot(mv.x, mv.y) > 0.1;
@@ -312,7 +342,8 @@
           if (this.stepT <= 0) { this.stepT = this.sprinting ? 0.19 : 0.28; R.Audio.play('step'); if (W.map.dustColor) FX.particle({ x: this.x, y: this.y, vy: -5, life: 0.3, color: W.map.dustColor, size: 1 }); }
         }
         if (!locked && sm > 0) {
-          if (Input.hit('dodge') && this.rollCd <= 0) { if (this.spend(25)) this.roll(moving ? Math.atan2(mv.y, mv.x) : this.aim); }
+          if (Input.hit('dodge')) this.dodgeBuf = 0.2;
+          if (this.dodgeBuf > 0 && this.rollCd <= 0) { this.dodgeBuf = 0; if (this.spend(25)) this.roll(moving ? Math.atan2(mv.y, mv.x) : this.aim); }
           else if (Input.hit('heavy') && this.atkCd <= 0 && this.castT <= 0) { if (this.spend(25)) this.attack(true); }
           else if (Input.held('attack') && !R.UI.pointerOverUI) this.attack();
           for (let i = 0; i < 4; i++) if (Input.hit('skill' + (i + 1))) this.castSkill(i);
@@ -328,6 +359,8 @@
           if (this.pendingHit.t <= 0) { const h = this.pendingHit; this.pendingHit = null; h.fn(); }
         }
       }
+      const wen = this.ench && this.ench.weapon && R.Crafting && R.Crafting.ENCH[this.ench.weapon.id];
+      if (wen && R.settings.fancy !== false && Math.random() < dt * (3 + this.ench.weapon.lv * 2)) { const h = this.handPos(); FX.particle({ x: h.x + U.rand(-4, 4), y: h.y - U.rand(0, 10), vy: -12, life: 0.5, color: wen.color, glow: true, size: 1 }); }
       for (const g of this.ghosts) g.t -= dt;
       this.ghosts = this.ghosts.filter((g) => g.t > 0);
       if (this.hurtT > 0) this.hurtT -= dt;
@@ -401,7 +434,7 @@
       this.atkAngle = aim;
       this.dir = dirFromAngle(aim);
       this.squash(heavy || finisher ? 1.12 : 1.06, heavy || finisher ? 0.9 : 0.95, 0.12);
-      const eff = (w && w.effect) || {};
+      const eff = this.weaponEffect();
       const cx = this.x, cy = this.y - 10;
       const L = w && w.look;
       const trail = (L && (L.glow || L.gem)) || '#ffffff';
@@ -475,7 +508,8 @@
       const sk = id && R.Skills[id];
       if (!sk) return;
       const lv = this.skillLevel(id);
-      if (lv <= 0) { R.UI.toast(this.level < R.SKILL_UNLOCK[slot] ? 'Unlocks at level ' + R.SKILL_UNLOCK[slot] : 'Skill not learned', 'bad'); R.Audio.play('error'); return; }
+      if (this.level < R.SKILL_UNLOCK[slot]) { R.UI.toast('Skill slot ' + (slot + 1) + ' unlocks at level ' + R.SKILL_UNLOCK[slot], 'bad'); R.Audio.play('error'); return; }
+      if (lv <= 0) { R.UI.toast('Skill not learned', 'bad'); R.Audio.play('error'); return; }
       if ((this.skillCd[id] || 0) > 0) return;
       if (this.castT > 0) return;
       const cost = typeof sk.mp === 'function' ? sk.mp(lv) : sk.mp;
@@ -632,7 +666,7 @@
       } else if (sm > 0) {
         const ai = (this.def.update) || R.AI[this.def.ai || 'melee'] || R.AI.melee;
         // co-op: the AI code thinks in terms of "the player"; point it at this monster's target
-        const Wd = R.World, tgt = R.Net && R.Net.isHost() && R.Net.remoteCount() ? R.Net.pickTarget(this) : null, saved = Wd.player;
+        const Wd = R.World, tgt = R.Net && R.Net.authority && R.Net.remoteCount() ? R.Net.pickTarget(this) : null, saved = Wd.player;
         if (tgt) Wd.player = tgt;
         try {
           if (!(R.AI.pre && R.AI.pre(this, dt, sm))) ai(this, dt, sm);
@@ -841,7 +875,7 @@
       const list = R.Combat.hostiles(this.team);
       const py = this.y - this.z * 0.3;
       for (const e of list) {
-        if (e.dead || e.untargetable || e.remote || this.hitList.includes(e)) continue; // other players judge their own hits
+        if (e.dead || e.untargetable || (e.remote && this.team !== 'player') || this.hitList.includes(e)) continue; // other players judge their own hits (except PvP shots)
         let hit;
         if (this.team === 'player') {
           // enemies are hit anywhere along their body (a vertical capsule from feet to head),
@@ -894,7 +928,7 @@
   class Pickup extends Entity {
     constructor(x, y, o) {
       super(x, y);
-      this.item = o.item; this.qty = o.qty || 1; this.gold = o.gold || 0;
+      this.item = o.item; this.qty = o.qty || 1; this.gold = o.gold || 0; this.ench = o.ench || null;
       this.solid = false;
       const a = U.rand(0, U.TAU), s = U.rand(20, 60);
       this.vx = Math.cos(a) * s; this.vy = Math.sin(a) * s * 0.6; this.vz = U.rand(70, 110); this.z = 4;
@@ -915,6 +949,7 @@
       if (d < 7) this.collect(p);
     }
     collect(p) {
+      if (this.netUid) { if (R.Net) R.Net.claimDrop(this); return; } // co-op drop: first come, first served
       this.remove = true;
       if (this.gold) {
         p.gold += this.gold; R.Audio.play('coin');
@@ -922,7 +957,7 @@
         R.events.emit('gold', { amount: this.gold });
       } else {
         const it = R.Items[this.item];
-        p.addItem(this.item, this.qty);
+        p.addEntry({ id: this.item, qty: this.qty, ench: this.ench });
         R.Audio.play('pickup');
         const col = G.RARITY[it.rarity] ? G.RARITY[it.rarity].color : '#fff';
         R.UI && R.UI.lootToast(it, this.qty);

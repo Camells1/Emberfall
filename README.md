@@ -31,37 +31,50 @@ Up to 4 players. You can set an optional password when hosting. (There's also a 
 
 ## Features
 
-- **5 classes** (Warrior, Ranger, Mage, Rogue, Paladin) and **9 Bloodborn races** (Human, Elf, Dwarf, Orc, Beastkin, Dragonborn, Demonkin, Revenant, Sylvan), each with their own look and bonuses
-- **Deep character customisation**: body types, 18 hairstyles, beards, ears, horns, face markings, accessories and custom colours. Restyle anytime at the Stylist in Havenbrook.
-- **18 regions**: forests, swamps, deserts, glaciers, volcanoes, a coast with a lighthouse, a fungal cave, a fairy forest and the post-game Starfall Rift, with cliffs, waterfalls and hidden areas to discover
-- **11 bosses** with multiple phases, shields and enrage timers. Beat one and a **Challenge Sigil** lets you rematch it at a higher tier, forever.
-- **Difficulty levels** from Story to Hell
-- **60 quests** plus repeatable bounties, hundreds of items and legendary boss loot
-- Smart enemies that path around walls, take turns attacking, dodge your shots and flee when hurt
+- **Huge open world**: every outdoor region is about ten times bigger, with roads, outposts (waypoints + crafting), forts, champions, ruins, lakes, wishing wells, standing stones and hidden chests. The further from town, the tougher the monsters.
+- **Online co-op for up to 4** with room codes and optional passwords. Everyone can go anywhere, drop items for each other or send items and gold with "Give to".
+- **PvP arena** (the Crimson Colosseum, just west of Havenbrook), plus a solo **Gauntlet** of five monster waves
+- **5 classes** and **17 Bloodborn races** (Human, Elf, Dwarf, Orc, Beastkin, Dragonborn, Demonkin, Revenant, Sylvan, Gnome, Merfolk, Celestial, Forged, Nightborn, Fae, Minotaur, Lizardfolk)
+- **Learnable skills**: 30 extra skills from trainers and quests. Put any 4 on your skill bar.
+- **Crafting**: gather herbs, ore and timber, brew potions, forge gear, **enchant** it (16 enchantments) and salvage what you don't need
+- **11 mounts** with their own special abilities and **16 pets** that follow you and fetch loot
+- **11 bosses**, each with its own attacks, animations and movement, plus phases, shields, enrage timers and endless **Challenge Sigil** rematches
+- **Custom crosshairs**, deep character customisation, difficulty levels from Story to Hell, 60+ quests and hundreds of items
 - Everything (art, sound and music) is generated in code. There are no asset files.
 - A few easter eggs. Be nice to the hens.
 
 ## Controls
 
-| Action | Keyboard / mouse | Gamepad |
-|---|---|---|
-| Move | WASD or arrow keys | Left stick |
-| Aim | Mouse | Right stick |
-| Attack (hold for combos) | Left click or J | RT |
-| Heavy attack (costs stamina) | Right click or U | LT |
-| Dodge roll (costs stamina) | Space | A |
-| Sprint (drains stamina) | Hold Shift | R3 |
-| Skills | 1–4 | LB, RB, B, L3 |
-| Health / mana potion | Q / R | D-pad |
-| Talk, open, travel | E or F | Y |
-| Inventory | I or Tab | View |
-| Skills / quests / map | K / L / M | |
-| Pause, save, settings / back | Esc | Menu / B |
-| Move around menus | Arrow keys, Enter | D-pad or left stick, A |
+| Action | Keys |
+|---|---|
+| Move / aim | WASD · mouse |
+| Attack / heavy attack | Left click · right click |
+| Dodge roll | Space |
+| Sprint | Shift |
+| Skills | 1 2 3 4 |
+| Potions | Q (health) · R (mana) |
+| Interact / talk | E |
+| Inventory · skills · quests · map | I · K · L · M |
+| Crafting recipes | B |
+| Ride / dismount · mount ability | H · Space (while riding) |
+| Stable (mounts & pets) | N |
+| Admin panel | F10 |
+| Menu | Esc |
 
-F11 toggles fullscreen in the desktop app. The game goes quiet when it's minimized or in the background (turn this off in Settings).
+Gamepads work too.
 
 ## Changelog
+
+### v1.4
+- Every outdoor region is about 10x bigger, with new points of interest, outposts and waypoints
+- Free-roaming co-op, shared item drops, "Give to" for items and gold, room passwords, and a Multiplayer button on the title screen
+- The Crimson Colosseum PvP arena and the Gauntlet
+- Crafting, gathering, enchanting and salvaging
+- Unique mechanics and animations for every boss
+- 30 learnable skills from trainers and quests, and a customisable skill bar
+- Mounts with abilities, pets, and a stable
+- 8 new races (17 total)
+- Custom crosshairs, smoother movement, and an admin panel
 
 ### v1.3
 

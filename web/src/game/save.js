@@ -14,11 +14,11 @@
   Save.snapshot = function () {
     const W = R.World, p = W.player;
     return {
-      v: 1, layout: 2, time: Date.now(), playtime: Math.round(R.playtime || 0),
+      v: 1, layout: 3, time: Date.now(), playtime: Math.round(R.playtime || 0),
       map: W.map.id, x: Math.round(p.x), y: Math.round(p.y),
       player: {
         name: p.name, cls: p.cls, race: p.race, appearance: p.appearance, level: p.level, xp: p.xp, attrs: p.attrs, attrPoints: p.attrPoints,
-        skillPoints: p.skillPoints, skillLv: p.skillLv, equip: p.equip, inv: p.inv, gold: p.gold, hp: Math.round(p.hp), mp: Math.round(p.mp), kills: p.kills, hotbar: p.hotbar,
+        skillPoints: p.skillPoints, skillLv: p.skillLv, learned: p.learned, mounts: p.mounts, pets: p.pets, mount: p.mount, pet: p.pet, equip: p.equip, ench: p.ench, inv: p.inv, gold: p.gold, hp: Math.round(p.hp), mp: Math.round(p.mp), kills: p.kills, hotbar: p.hotbar,
       },
       quests: R.QuestLog.state, tracked: R.QuestLog.tracked, questCooldowns: R.QuestLog.cooldowns, questRepeats: R.QuestLog.repeats, flags: W.flags, waypoints: W.waypoints, visited: W.visited,
     };

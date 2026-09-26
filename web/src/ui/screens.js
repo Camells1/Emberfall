@@ -25,7 +25,7 @@
       UI.button(menu, 'Settings', () => UI.open('settings', { back: 'title' }));
       UI.button(menu, 'Controls', () => UI.open('controls', { back: 'title' }));
       if (isElectron()) UI.button(menu, 'Quit', () => window.electronAPI.quit());
-      el('div', 'title-foot', 'v1.3.1 · Built with love and procedurally drawn pixels · Arrow keys / gamepad work in menus', box);
+      el('div', 'title-foot', 'v1.4 · Built with love and procedurally drawn pixels · Arrow keys / gamepad work in menus', box);
     },
     back() {},
   };
@@ -325,7 +325,8 @@
         const it = R.Items[p.equip[slot]];
         if (it) { s.appendChild(UI.itemIcon(it, 3)); s.style.borderColor = UI.rarityColor(it); s.classList.add('filled'); }
         else el('span', 'ph', SLOT_ICONS[slot], s);
-        UI.bindTip(s, () => (it ? UI.itemTip(it, { equipped: true, hint: slot === 'weapon' ? 'Your weapon (equip another to swap)' : 'Click to unequip' }) : `<div class="tt-name">${R.SLOT_NAMES[slot]}</div><div class="tt-desc dim">Empty</div>`));
+        if (it && p.ench[slot]) s.classList.add('ench');
+        UI.bindTip(s, () => (it ? UI.itemTip(it, { equipped: true, ench: p.ench[slot], hint: slot === 'weapon' ? 'Your weapon (equip another to swap)' : 'Click to unequip' }) : `<div class="tt-name">${R.SLOT_NAMES[slot]}</div><div class="tt-desc dim">Empty</div>`));
         s.onclick = () => { if (it) { p.unequip(slot); UI.refresh(); UI.drawFace(); } };
       }
       // --- stats
@@ -370,21 +371,48 @@
         if (R.SLOTS.includes(it.slot) && p.equipReason(it)) c.classList.add('unusable');
         else if (R.SLOTS.includes(it.slot) && isUpgrade(p, it)) el('span', 'up-arrow', '▲', c);
         const hint = R.SLOTS.includes(it.slot) ? 'Click: equip · Right-click: drop' : it.use ? 'Click: use · Right-click: drop' : it.slot === 'quest' ? 'Quest item' : 'Right-click: drop';
-        UI.bindTip(c, () => UI.itemTip(it, { hint }));
-        c.onclick = () => { UI.hideTip(); p.useItem(i); UI.refresh(); UI.drawFace(); };
+        if (stack.ench) c.classList.add('ench');
+        UI.bindTip(c, () => UI.itemTip(it, { hint, ench: stack.ench }));
+        c.onclick = () => {
+          UI.hideTip();
+          const N = R.Net;
+          if (N && N.giveTo != null && N.active()) {
+            if (it.slot === 'quest') { UI.toast("Quest items can't be given away", 'bad'); return; }
+            if (!N.peers.has(N.giveTo)) { N.giveTo = null; UI.refresh(); return; }
+            p.inv.splice(i, 1);
+            N.give(N.giveTo, stack);
+            UI.toast(`Gave ${stack.qty > 1 ? stack.qty + '× ' : ''}${it.name} to ${N.nameOf(N.giveTo)}`, 'good'); R.Audio.play('coin');
+            UI.refresh();
+            return;
+          }
+          p.useItem(i); UI.refresh(); UI.drawFace();
+        };
         c.oncontextmenu = (e) => {
           e.preventDefault();
           if (it.slot === 'quest') { UI.toast("You can't drop quest items", 'bad'); return; }
           UI.hideTip();
           p.inv.splice(i, 1);
-          R.World.add(new R.Pickup(p.x + U.rand(-8, 8), p.y + 6, { item: stack.id, qty: stack.qty })).age = -2;
+          const x = p.x + U.rand(-8, 8), y = p.y + 6;
+          // co-op: dropped items are shared with everyone in the area
+          if (!(R.Net && R.Net.dropItem(stack, x, y))) R.World.add(new R.Pickup(x, y, { item: stack.id, qty: stack.qty, ench: stack.ench })).age = -2;
           UI.refresh();
         };
       });
       let empty = Math.max(0, 42 - grid.children.length);
       if ((grid.children.length + empty) % 7) empty += 7 - ((grid.children.length + empty) % 7);
       for (let i = 0; i < empty; i++) el('div', 'bag-slot empty', null, grid);
-      el('div', 'bag-foot', `<span class="coin"></span> ${U.fmt(p.gold)} gold`, bag);
+      const bf = el('div', 'bag-foot', `<span class="coin"></span> ${U.fmt(p.gold)} gold`, bag);
+      // co-op: give items or gold straight to a friend
+      const N = R.Net;
+      if (N && N.active() && N.party().length) {
+        const gv = el('div', 'give-row', N.giveTo != null ? `🎁 <b>Click an item to give it to ${U.esc(N.nameOf(N.giveTo))}</b>` : 'Give to:', bf);
+        if (N.giveTo != null) UI.button(gv, 'Done', () => { N.giveTo = null; UI.refresh(); }, 'small');
+        else for (const q of N.party()) UI.button(gv, U.esc(q.look.name), () => { N.giveTo = q.id; UI.refresh(); }, 'small');
+        if (N.giveTo != null) {
+          const gi = el('input', 'cc-name give-gold', null, gv); gi.type = 'number'; gi.min = 1; gi.placeholder = 'gold';
+          UI.button(gv, 'Send gold', () => { const a = Math.floor(+gi.value || 0); if (N.giveGold(N.giveTo, a)) { UI.toast(`Sent ${a} gold to ${N.nameOf(N.giveTo)}`, 'good'); R.Audio.play('coin'); UI.refresh(); } else UI.toast('Type how much gold to send', 'bad'); }, 'small');
+        }
+      }
     },
     update(dt) {
       const cv = S.inventory.canvas;
@@ -403,7 +431,7 @@
       const w = p.weapon();
       if (w && w.look) { const h = C().handOffset(dir, 'idle', f, p.appearance); ctx.save(); ctx.translate(80 + h.x * k, 166 + h.y * k); ctx.scale(k, k); R.Weapons.draw(ctx, 0, 0, w.look, w.look.type === 'bow' ? Math.PI / 2 : -Math.PI / 2 + 0.55); ctx.restore(); }
     },
-    close() { S.inventory.canvas = null; },
+    close() { S.inventory.canvas = null; if (R.Net) R.Net.giveTo = null; },
   };
   function isUpgrade(p, it) {
     const eq = R.Items[p.equip[it.slot]];
@@ -500,9 +528,9 @@
       const W = R.World, M = W.map;
       const body = UI.frame(m, W.def.name, 'map-frame');
       const wrap = el('div', 'map-wrap', null, body);
-      const scale = Math.max(1, Math.floor(Math.min(1100 / M.w, 540 / M.h)));
+      const scale = Math.max(1, Math.min(6, 1100 / M.w, 540 / M.h));
       const cv = document.createElement('canvas');
-      cv.width = M.w * scale; cv.height = M.h * scale; cv.className = 'pix map-canvas';
+      cv.width = Math.round(M.w * scale); cv.height = Math.round(M.h * scale); cv.className = 'pix map-canvas';
       wrap.appendChild(cv);
       S.map.cv = cv; S.map.scale = scale;
       el('div', 'map-legend', '<span><i style="background:#fff"></i>You</span><span><i style="background:#ffe040"></i>Quest</span><span><i style="background:#40ff80"></i>Villager</span><span><i style="background:#ff4040"></i>Enemy</span><span><i style="background:#40c0ff"></i>Exit</span><span><i style="background:#b070ff"></i>Waypoint</span><span><i style="background:#ffd040;border-radius:50%"></i>Quest goal</span>', body);
@@ -586,7 +614,7 @@
           row.appendChild(UI.itemIcon(it, 3));
           el('div', 'shop-name', `<span style="color:${UI.rarityColor(it)}">${U.esc(it.name)}</span>${st.qty > 1 ? ' ×' + st.qty : ''}<small>${R.SLOT_NAMES[it.slot]}${need.has(it.id) ? ' · <span class="up">needed for a quest</span>' : ''}</small>`, row);
           el('div', 'shop-price', `<span class="coin"></span>${price}`, row);
-          UI.bindTip(row, () => UI.itemTip(it, { price, priceLabel: 'Sell for', hint: st.qty > 1 ? 'Click: sell one · Shift-click: sell all' : 'Click to sell' }));
+          UI.bindTip(row, () => UI.itemTip(it, { price, ench: st.ench, priceLabel: 'Sell for', hint: st.qty > 1 ? 'Click: sell one · Shift-click: sell all' : 'Click to sell' }));
           const sell = (all) => {
             const cur = p.inv[i];
             if (!cur || cur.id !== st.id) return;
@@ -683,6 +711,21 @@
       UI.button(dctl, '◀', () => setD(di - 1));
       el('span', 'dif-' + DL[di].id, `${DL[di].name}<small>${U.esc(DL[di].desc)}</small>`, dctl);
       UI.button(dctl, '▶', () => setD(di + 1));
+      // crosshair
+      const XH = R.Crosshairs, xl = XH.list, xi = Math.max(0, xl.findIndex((d) => d.id === (st.crosshair || 'default')));
+      const xrow = el('div', 'set-row xh-row', '<label>Crosshair</label>', list);
+      const xctl = el('div', 'cc-cycle', null, xrow);
+      const setX = (i) => { st.crosshair = xl[(i + xl.length) % xl.length].id; R.Save.saveSettings(); XH.apply(); UI.refresh(); };
+      UI.button(xctl, '◀', () => setX(xi - 1));
+      const xv = el('span', 'xh-prev', null, xctl); xv.appendChild(XH.image(xl[xi].id, st.crosshairColor || null, 2)); el('small', null, `${xl[xi].name} (${xi === 0 ? 'default' : xi + ' of ' + (xl.length - 1)})`, xv);
+      UI.button(xctl, '▶', () => setX(xi + 1));
+      const xcol = el('div', 'set-row', '<label>Crosshair colour</label>', list);
+      const sws = el('div', 'xh-cols', null, xcol);
+      for (const c of XH.COLORS) {
+        const sw = el('div', 'sw' + ((st.crosshairColor || null) === c ? ' sel' : '') + (c ? '' : ' none'), c ? '' : '★', sws);
+        if (c) sw.style.background = c; sw.title = c ? c : "The design's own colours";
+        sw.onclick = () => { st.crosshairColor = c; R.Save.saveSettings(); XH.apply(); UI.refresh(); };
+      }
       slider('Master Volume', 'master', (v) => R.Audio.setVolume('master', v));
       slider('Music', 'music', (v) => R.Audio.setVolume('music', v));
       slider('Sound Effects', 'sfx', (v) => R.Audio.setVolume('sfx', v));
@@ -703,7 +746,7 @@
       const body = UI.frame(m, 'Controls', 'controls-frame');
       const rows = [
         ['Move', 'W A S D / Arrow keys'], ['Aim', 'Mouse'], ['Attack', 'Left click (hold) / J'], ['Dodge roll (25 stamina)', 'Space'], ['Sprint (drains stamina)', 'Hold Shift'], ['Heavy attack (25 stamina)', 'Right click / U'], ['Skills', '1 2 3 4'],
-        ['Health / Mana potion', 'Q / R'], ['Interact / Talk', 'E / F'], ['Inventory', 'I / Tab'], ['Character', 'C'], ['Skills', 'K'], ['Quest log', 'L'], ['Map', 'M'], ['Pause / Back', 'Esc'],
+        ['Health / Mana potion', 'Q / R'], ['Interact / Talk', 'E / F'], ['Crafting recipes', 'B'], ['Mount up / dismount', 'H'], ['Mount ability (while riding)', 'Space'], ['Stable: mounts & pets', 'N'], ['Inventory', 'I / Tab'], ['Character', 'C'], ['Skills', 'K'], ['Quest log', 'L'], ['Map', 'M'], ['Pause / Back', 'Esc'],
         ['Menus', 'Arrow keys to move · Enter to select · Esc to go back'],
         ['Gamepad', 'Left stick move · Right stick aim · RT attack · LT heavy attack · A dodge · R3 sprint · LB/RB/B/L3 skills · Y interact · D-pad potions'],
         ['Gamepad menus', 'D-pad / stick to move · A select · B back · X drop/sell all'],

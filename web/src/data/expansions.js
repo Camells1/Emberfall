@@ -14,6 +14,7 @@
   function offsetBuilder(M, ox, oy, ow, oh) {
     const P = Object.create(M);
     const sx = (x) => x + ox, sy = (y) => y + oy;
+    P.__root = M.__root || M; P.__ox = (M.__ox || 0) + ox; P.__oy = (M.__oy || 0) + oy; // for code that edits the real map directly
     P.w = ow; P.h = oh;
     P.inb = (x, y) => x >= 0 && y >= 0 && x < ow && y < oh;
     P.set = (x, y, t) => { if (P.inb(x | 0, y | 0)) M.set(sx(x), sy(y), t); };
@@ -64,7 +65,9 @@
     P.zone = (n, x, y, r, fn) => M.zone(n, sx(x), sy(y), r, fn);
     P.waypoint = (id, x, y, n) => M.waypoint(id, sx(x), sy(y), n);
     P.interact = (o) => M.interact(Object.assign({}, o, { x: sx(o.x), y: sy(o.y) }));
-    P.raise = (inside, top, style) => M.raise((x, y) => inside(x - ox, y - oy), top, style);
+    P.node = (k, x, y) => M.node(k, sx(x), sy(y));
+    P.station = (x, y) => M.station(sx(x), sy(y));
+    P.raise = (inside, top, style) => M.raise((x, y) => x >= ox && y >= oy && x < ox + ow && y < oy + oh && inside(x - ox, y - oy), top, style);
     P.plateau = (x, y, w, h, top, style, rag) => M.plateau(sx(x), sy(y), w, h, top, style, rag);
     P.stairs = (x, y, w, h, st) => M.stairs(sx(x), sy(y), w, h, st);
     P.waterfall = (x, y, w, h) => M.waterfall(sx(x), sy(y), w, h);
@@ -137,6 +140,7 @@
     const W = R.World;
     if (W.flags._henWrathT > W.time) return;
     W.flags._henWrathT = W.time + 25;
+    W.flags.henWraths = (W.flags.henWraths || 0) + 1;
     R.UI.banner('THE HENS', 'have had enough.');
     R.Audio.play('bossRoar', { pitch: 2.4 });
     const p = W.player;
@@ -289,142 +293,8 @@
     const gearId = () => (band.length ? band[rng.int(0, band.length - 1)].id : potionFor(lv));
     const chestId = () => 'x_' + mapId + '_' + (n++);
     const wall = (x, y) => { const t = R.Tiles[M.get(x, y)]; return !t || t.solid; };
-    cfg.pois.forEach((kind, i) => {
-      const s = spots[i];
-      if (!s) return;
-      const [x, y] = s;
-      switch (kind) {
-        case 'cliff': {
-          const w = rng.int(7, 10), h = rng.int(5, 7), px = x - (w >> 1), py = y - h;
-          if (cfg.water !== 'lava') { M.circle(x - 1, py + h + 4, 2.2, cfg.water === 'bog' ? 'murk' : 'shallow'); }
-          M.plateau(px, py, w, h, cfg.base, cfg.cliff);
-          M.stairs(px + w - 4, py + h, 3, 2, cfg.cliff);
-          if (cfg.water === 'water' || cfg.water === 'frozenlake') { M.path([[x - 1, py + 1], [x - 1, py + h - 1]], 'water', 1); M.waterfall(x - 2, py + h, 2, 2); M.circle(x - 1, py + h + 3, 1.6, 'water'); }
-          M.chest(chestId(), px + 1, py + 1, { loot: [gearId(), potionFor(lv)], gold: 20 + lv * 12, tier: 'iron' });
-          M.reserve(px - 1, py - 1, w + 2, h + 5);
-          if (!cfg.safe && cfg.spawns.length) { const [sid, slv] = cfg.spawns[rng.int(0, cfg.spawns.length - 1)]; M.spawn(sid, px + (w >> 1), py + (h >> 1), { count: 2, radius: 2, level: slv + 1, elite: 0.3 }); }
-          break;
-        }
-        case 'ruins': {
-          const col = cfg.cliff === 'sand' ? 'sandcolumn' : 'pillar';
-          for (let k = 0; k < 6; k++) { const a = k / 6 * U.TAU; M.prop(k % 2 ? 'ruinwall' : col, x + Math.round(Math.cos(a) * 4), y + Math.round(Math.sin(a) * 3), rng.int(0, 1)); }
-          M.prop('statue', x, y - 1);
-          M.chest(chestId(), x + 1, y + 1, { loot: [gearId(), potionFor(lv)], gold: 30 + lv * 15, tier: 'iron' });
-          M.sign(x - 2, y + 2, U.choose(['These stones remember a kingdom\nno one else does.', 'Carved into the base:\n"The flame endures."', 'A worn inscription:\n"Turn back." Someone has added: "no :)"']));
-          M.reserve(x - 5, y - 4, 11, 8);
-          if (!cfg.safe && cfg.spawns.length) { const [sid, slv] = cfg.spawns[rng.int(0, cfg.spawns.length - 1)]; M.spawn(sid, x, y + 3, { count: 3, radius: 3, level: slv }); }
-          break;
-        }
-        case 'den': {
-          M.circle(x, y, 4.5, cfg.alt2 || cfg.alt, 1.5);
-          for (let k = 0; k < 5; k++) M.prop(k % 2 ? 'bones' : 'skullpile', x + rng.int(-3, 3), y + rng.int(-3, 3));
-          M.chest(chestId(), x, y - 3, { loot: [gearId(), gearId(), potionFor(lv)], gold: 50 + lv * 20, tier: 'gold' });
-          M.spawn(cfg.den, x, y, { count: 4, radius: 3, level: lv + 1, elite: 0.6, respawn: 180 });
-          M.reserve(x - 5, y - 5, 11, 11);
-          break;
-        }
-        case 'camp': {
-          M.circle(x, y, 4, cfg.path, 1);
-          M.prop('tent', x - 3, y - 1, rng.int(0, 1)); M.prop('tent', x + 3, y - 1, rng.int(0, 1)); M.prop('campfire', x, y + 1); M.prop('crate', x + 3, y + 3); M.prop('barrel', x - 3, y + 3);
-          M.chest(chestId(), x, y - 3, { loot: [gearId(), potionFor(lv)], gold: 40 + lv * 14, tier: 'iron' });
-          M.spawn(cfg.camp, x, y + 2, { count: 3, radius: 3, level: lv, elite: 0.25 });
-          M.reserve(x - 5, y - 4, 11, 9);
-          break;
-        }
-        case 'pond': case 'duckpond': case 'lavapool': {
-          const liquid = kind === 'lavapool' ? 'lava' : cfg.water === 'bog' ? 'bog' : 'water';
-          if (liquid !== 'lava') M.circle(x, y, 4.6, cfg.water === 'bog' ? 'murk' : 'shallow', 1.2);
-          M.circle(x, y, 3.2, liquid, 1);
-          if (liquid === 'lava') { M.light(x, y, 90, '#ff6020', 0.15); M.prop('lavapillar', x + 5, y - 2); break; }
-          M.prop('fishspot', x, y);
-          M.interact({ x, y: y + 3, r: 34, label: 'Fish', fn: () => fish(mapId + ':' + x + ',' + y) });
-          if (kind === 'duckpond') { M.prop('rubberduck', x - 1, y - 1); M.interact({ x: x - 1, y: y + 2, r: 26, label: 'Inspect the duck', fn: duck }); M.prop('bench', x + 5, y + 2); }
-          for (let k = 0; k < 4; k++) M.prop(cfg.water === 'bog' ? 'reeds' : 'lily', x + rng.int(-3, 3), y + rng.int(-2, 2));
-          M.reserve(x - 5, y - 5, 11, 11);
-          break;
-        }
-        case 'sunken': {
-          M.rect(x - 4, y - 3, 9, 7, 'planks');
-          M.prop('stilthut', x - 2, y, rng.int(0, 1)); M.prop('barrel', x + 3, y + 2); M.prop('crate', x + 2, y + 3);
-          M.chest(chestId(), x + 3, y - 2, { loot: [gearId(), potionFor(lv)], gold: 30 + lv * 12 });
-          if (cfg.spawns.length) M.spawn(cfg.spawns[rng.int(0, cfg.spawns.length - 1)][0], x, y + 4, { count: 3, radius: 3, level: lv });
-          M.reserve(x - 5, y - 4, 11, 9);
-          break;
-        }
-        case 'shrine': case 'fairyshrine': {
-          M.circle(x, y, 2.6, cfg.path, 0);
-          M.prop(kind === 'fairyshrine' ? 'fairyring' : 'statue', x, y);
-          for (let k = 0; k < 4; k++) M.prop(kind === 'fairyshrine' ? 'standingstone' : 'lamp', x + [-3, 3, -3, 3][k], y + [-2, -2, 2, 2][k], k % 3);
-          M.interact({ x, y: y + 2, r: 30, label: 'Pray', fn: () => bless(mapId + ':' + x) });
-          M.reserve(x - 4, y - 3, 9, 7);
-          break;
-        }
-        case 'mimic': {
-          // looks exactly like any other chest...
-          const mid = lv < 7 ? 'mimic_1' : lv < 11 ? 'mimic_2' : lv < 15 ? 'mimic_3' : lv < 19 ? 'mimic_4' : 'mimic_5';
-          M.chest(chestId(), x, y, { loot: [], gold: 0, mimic: mid });
-          M.prop('bones', x - 2, y + 1); M.prop('bones', x + 2, y + 1);
-          M.reserve(x - 2, y - 1, 5, 3);
-          break;
-        }
-        case 'farm': {
-          M.rect(x - 6, y - 3, 12, 7, 'farmland');
-          for (let yy = y - 2; yy < y + 4; yy += 2) for (let xx = x - 5; xx < x + 6; xx += 2) M.prop('crops', xx, yy, rng.int(0, 2));
-          M.prop('mill', x - 9, y - 2); M.prop('haystack', x + 8, y - 2); M.prop('scarecrow', x, y + 1);
-          for (let xx = x - 6; xx < x + 6; xx++) M.prop('fence', xx, y + 5);
-          M.prop('hut', x + 9, y + 3, 0);
-          M.spawn('hen', x + 6, y + 7, { count: 5, radius: 3, level: 1, respawn: 60, critter: true });
-          M.sign(x - 7, y + 5, 'Please do not bother the hens.\nWe mean it.\n— Management');
-          M.reserve(x - 10, y - 4, 22, 13);
-          break;
-        }
-        case 'orchard': {
-          for (let yy = -2; yy <= 2; yy += 2) for (let xx = -4; xx <= 4; xx += 4) M.prop(cfg.trees[0], x + xx, y + yy, rng.int(0, 3));
-          M.prop('cart', x + 6, y + 3); M.prop('crate', x - 6, y + 3);
-          M.chest(chestId(), x, y + 4, { loot: ['elixir_speed', potionFor(Math.max(5, lv))], gold: 40 });
-          M.reserve(x - 7, y - 3, 15, 9);
-          break;
-        }
-        case 'lookout': {
-          M.plateau(x - 4, y - 5, 9, 5, cfg.base, cfg.cliff);
-          M.stairs(x - 1, y, 3, 2, cfg.cliff);
-          M.prop('bench', x, y - 3); M.prop('lamp', x - 3, y - 4); M.prop('telescope' in R.Props ? 'telescope' : 'sign', x + 3, y - 4);
-          M.chest(chestId(), x + 3, y - 2, { loot: ['elixir_might', 'potion'], gold: 80, tier: 'iron' });
-          M.reserve(x - 5, y - 6, 11, 9);
-          break;
-        }
-        case 'cowsign': {
-          M.sign(x, y, 'There is no cow level.');
-          M.interact({ x: x + 1, y: y + 1, r: 20, label: 'Look closer', fn: () => cowLevel(x, y) });
-          M.reserve(x - 1, y - 1, 3, 3);
-          break;
-        }
-        case 'graves': {
-          const jokes = ['Here lies Steve.\nHe tried to punch a tree.', 'Here lies Gary.\nHe said "What does this lever do?"', 'Here lies a slime.\nIt was very, very round.', 'R.I.P. Sir Rollsalot.\nForgot to dodge.', 'Here lies the hero\'s pet rock.\nIt never moved on.'];
-          for (let k = 0; k < jokes.length; k++) { M.prop('grave', x - 4 + k * 2, y); M.interact({ x: x - 4 + k * 2, y: y + 1, r: 12, label: 'Read', fn: () => R.UI.dialog([{ speaker: 'Gravestone', text: jokes[k] }]) }); }
-          M.prop('deadtree', x - 6, y - 1); M.prop('candles', x + 6, y);
-          M.reserve(x - 7, y - 2, 15, 4);
-          break;
-        }
-        case 'frozenruins': {
-          for (let k = 0; k < 5; k++) M.prop('frozenknight', x - 4 + k * 2, y + (k % 2));
-          M.chest(chestId(), x, y - 3, { loot: [gearId(), 'ether_large'], gold: 60 + lv * 15, tier: 'iron' });
-          M.sign(x - 5, y + 2, 'An army frozen mid-charge.\nSomeone has put a hat on one of them.');
-          M.reserve(x - 6, y - 4, 13, 8);
-          break;
-        }
-        case 'snowman': {
-          M.prop('snowman', x, y);
-          M.interact({ x, y: y + 1, r: 22, label: 'Talk', fn: frosty });
-          M.reserve(x - 1, y - 1, 3, 3);
-          break;
-        }
-        case 'mirage': {
-          M.extrasEntities = (M.extrasEntities || []).concat([{ kind: 'mirage', x: x * S + 8, y: y * S + 8 }]);
-          break;
-        }
-      }
-    });
+    const env = { rng, lv, mapId, chestId, gearId };
+    cfg.pois.forEach((kind, i) => { const sp = spots[i]; if (sp) placePOI(M, kind, sp[0], sp[1], cfg, env); });
     // plants, rocks, trees in the new area only
     const area = [ex + 2, ey + 2, ew - 4, eh - 4];
     M.scatter(cfg.trees[0], Math.round(cfg.treeN * 0.6), { on: [cfg.base, cfg.alt], area, minDist: 2.2 });
@@ -442,8 +312,144 @@
     }
     M.sign(hub[0] + 2, hub[1] + 1, cfg.name + (cfg.safe ? '' : '\n(Level ' + (lv - 1) + '-' + (lv + 2) + ')'));
   }
+  // One point of interest at tile (x, y). env: {rng, lv, mapId, chestId(), gearId()}
+  function placePOI(M, kind, x, y, cfg, env) {
+    const { rng, lv, mapId, chestId, gearId } = env;
+    switch (kind) {
+      case 'cliff': {
+        const w = rng.int(7, 10), h = rng.int(5, 7), px = x - (w >> 1), py = y - h;
+        if (cfg.water !== 'lava') { M.circle(x - 1, py + h + 4, 2.2, cfg.water === 'bog' ? 'murk' : 'shallow'); }
+        M.plateau(px, py, w, h, cfg.base, cfg.cliff);
+        M.stairs(px + w - 4, py + h, 3, 2, cfg.cliff);
+        if (cfg.water === 'water' || cfg.water === 'frozenlake') { M.path([[x - 1, py + 1], [x - 1, py + h - 1]], 'water', 1); M.waterfall(x - 2, py + h, 2, 2); M.circle(x - 1, py + h + 3, 1.6, 'water'); }
+        M.chest(chestId(), px + 1, py + 1, { loot: [gearId(), potionFor(lv)], gold: 20 + lv * 12, tier: 'iron' });
+        M.reserve(px - 1, py - 1, w + 2, h + 5);
+        if (!cfg.safe && cfg.spawns.length) { const [sid, slv] = cfg.spawns[rng.int(0, cfg.spawns.length - 1)]; M.spawn(sid, px + (w >> 1), py + (h >> 1), { count: 2, radius: 2, level: slv + 1, elite: 0.3 }); }
+        break;
+      }
+      case 'ruins': {
+        const col = cfg.cliff === 'sand' ? 'sandcolumn' : 'pillar';
+        for (let k = 0; k < 6; k++) { const a = k / 6 * U.TAU; M.prop(k % 2 ? 'ruinwall' : col, x + Math.round(Math.cos(a) * 4), y + Math.round(Math.sin(a) * 3), rng.int(0, 1)); }
+        M.prop('statue', x, y - 1);
+        M.chest(chestId(), x + 1, y + 1, { loot: [gearId(), potionFor(lv)], gold: 30 + lv * 15, tier: 'iron' });
+        M.sign(x - 2, y + 2, U.choose(['These stones remember a kingdom\nno one else does.', 'Carved into the base:\n"The flame endures."', 'A worn inscription:\n"Turn back." Someone has added: "no :)"']));
+        M.reserve(x - 5, y - 4, 11, 8);
+        if (!cfg.safe && cfg.spawns.length) { const [sid, slv] = cfg.spawns[rng.int(0, cfg.spawns.length - 1)]; M.spawn(sid, x, y + 3, { count: 3, radius: 3, level: slv }); }
+        break;
+      }
+      case 'den': {
+        M.circle(x, y, 4.5, cfg.alt2 || cfg.alt, 1.5);
+        for (let k = 0; k < 5; k++) M.prop(k % 2 ? 'bones' : 'skullpile', x + rng.int(-3, 3), y + rng.int(-3, 3));
+        M.chest(chestId(), x, y - 3, { loot: [gearId(), gearId(), potionFor(lv)], gold: 50 + lv * 20, tier: 'gold' });
+        M.spawn(cfg.den, x, y, { count: 4, radius: 3, level: lv + 1, elite: 0.6, respawn: 180 });
+        M.reserve(x - 5, y - 5, 11, 11);
+        break;
+      }
+      case 'camp': {
+        M.circle(x, y, 4, cfg.path, 1);
+        M.prop('tent', x - 3, y - 1, rng.int(0, 1)); M.prop('tent', x + 3, y - 1, rng.int(0, 1)); M.prop('campfire', x, y + 1); M.prop('crate', x + 3, y + 3); M.prop('barrel', x - 3, y + 3);
+        M.chest(chestId(), x, y - 3, { loot: [gearId(), potionFor(lv)], gold: 40 + lv * 14, tier: 'iron' });
+        M.spawn(cfg.camp, x, y + 2, { count: 3, radius: 3, level: lv, elite: 0.25 });
+        M.reserve(x - 5, y - 4, 11, 9);
+        break;
+      }
+      case 'pond': case 'duckpond': case 'lavapool': {
+        const liquid = kind === 'lavapool' ? 'lava' : cfg.water === 'bog' ? 'bog' : 'water';
+        if (liquid !== 'lava') M.circle(x, y, 4.6, cfg.water === 'bog' ? 'murk' : 'shallow', 1.2);
+        M.circle(x, y, 3.2, liquid, 1);
+        if (liquid === 'lava') { M.light(x, y, 90, '#ff6020', 0.15); M.prop('lavapillar', x + 5, y - 2); break; }
+        M.prop('fishspot', x, y);
+        M.interact({ x, y: y + 3, r: 34, label: 'Fish', fn: () => fish(mapId + ':' + x + ',' + y) });
+        if (kind === 'duckpond') { M.prop('rubberduck', x - 1, y - 1); M.interact({ x: x - 1, y: y + 2, r: 26, label: 'Inspect the duck', fn: duck }); M.prop('bench', x + 5, y + 2); }
+        for (let k = 0; k < 4; k++) M.prop(cfg.water === 'bog' ? 'reeds' : 'lily', x + rng.int(-3, 3), y + rng.int(-2, 2));
+        M.reserve(x - 5, y - 5, 11, 11);
+        break;
+      }
+      case 'sunken': {
+        M.rect(x - 4, y - 3, 9, 7, 'planks');
+        M.prop('stilthut', x - 2, y, rng.int(0, 1)); M.prop('barrel', x + 3, y + 2); M.prop('crate', x + 2, y + 3);
+        M.chest(chestId(), x + 3, y - 2, { loot: [gearId(), potionFor(lv)], gold: 30 + lv * 12 });
+        if (cfg.spawns.length) M.spawn(cfg.spawns[rng.int(0, cfg.spawns.length - 1)][0], x, y + 4, { count: 3, radius: 3, level: lv });
+        M.reserve(x - 5, y - 4, 11, 9);
+        break;
+      }
+      case 'shrine': case 'fairyshrine': {
+        M.circle(x, y, 2.6, cfg.path, 0);
+        M.prop(kind === 'fairyshrine' ? 'fairyring' : 'statue', x, y);
+        for (let k = 0; k < 4; k++) M.prop(kind === 'fairyshrine' ? 'standingstone' : 'lamp', x + [-3, 3, -3, 3][k], y + [-2, -2, 2, 2][k], k % 3);
+        M.interact({ x, y: y + 2, r: 30, label: 'Pray', fn: () => bless(mapId + ':' + x) });
+        M.reserve(x - 4, y - 3, 9, 7);
+        break;
+      }
+      case 'mimic': {
+        // looks exactly like any other chest...
+        const mid = lv < 7 ? 'mimic_1' : lv < 11 ? 'mimic_2' : lv < 15 ? 'mimic_3' : lv < 19 ? 'mimic_4' : 'mimic_5';
+        M.chest(chestId(), x, y, { loot: [], gold: 0, mimic: mid });
+        M.prop('bones', x - 2, y + 1); M.prop('bones', x + 2, y + 1);
+        M.reserve(x - 2, y - 1, 5, 3);
+        break;
+      }
+      case 'farm': {
+        M.rect(x - 6, y - 3, 12, 7, 'farmland');
+        for (let yy = y - 2; yy < y + 4; yy += 2) for (let xx = x - 5; xx < x + 6; xx += 2) M.prop('crops', xx, yy, rng.int(0, 2));
+        M.prop('mill', x - 9, y - 2); M.prop('haystack', x + 8, y - 2); M.prop('scarecrow', x, y + 1);
+        for (let xx = x - 6; xx < x + 6; xx++) M.prop('fence', xx, y + 5);
+        M.prop('hut', x + 9, y + 3, 0);
+        M.spawn('hen', x + 6, y + 7, { count: 5, radius: 3, level: 1, respawn: 60, critter: true });
+        M.sign(x - 7, y + 5, 'Please do not bother the hens.\nWe mean it.\n— Management');
+        M.reserve(x - 10, y - 4, 22, 13);
+        break;
+      }
+      case 'orchard': {
+        for (let yy = -2; yy <= 2; yy += 2) for (let xx = -4; xx <= 4; xx += 4) M.prop(cfg.trees[0], x + xx, y + yy, rng.int(0, 3));
+        M.prop('cart', x + 6, y + 3); M.prop('crate', x - 6, y + 3);
+        M.chest(chestId(), x, y + 4, { loot: ['elixir_speed', potionFor(Math.max(5, lv))], gold: 40 });
+        M.reserve(x - 7, y - 3, 15, 9);
+        break;
+      }
+      case 'lookout': {
+        M.plateau(x - 4, y - 5, 9, 5, cfg.base, cfg.cliff);
+        M.stairs(x - 1, y, 3, 2, cfg.cliff);
+        M.prop('bench', x, y - 3); M.prop('lamp', x - 3, y - 4); M.prop('telescope' in R.Props ? 'telescope' : 'sign', x + 3, y - 4);
+        M.chest(chestId(), x + 3, y - 2, { loot: ['elixir_might', 'potion'], gold: 80, tier: 'iron' });
+        M.reserve(x - 5, y - 6, 11, 9);
+        break;
+      }
+      case 'cowsign': {
+        M.sign(x, y, 'There is no cow level.');
+        M.interact({ x: x + 1, y: y + 1, r: 20, label: 'Look closer', fn: () => cowLevel(x, y) });
+        M.reserve(x - 1, y - 1, 3, 3);
+        break;
+      }
+      case 'graves': {
+        const jokes = ['Here lies Steve.\nHe tried to punch a tree.', 'Here lies Gary.\nHe said "What does this lever do?"', 'Here lies a slime.\nIt was very, very round.', 'R.I.P. Sir Rollsalot.\nForgot to dodge.', 'Here lies the hero\'s pet rock.\nIt never moved on.'];
+        for (let k = 0; k < jokes.length; k++) { M.prop('grave', x - 4 + k * 2, y); M.interact({ x: x - 4 + k * 2, y: y + 1, r: 12, label: 'Read', fn: () => R.UI.dialog([{ speaker: 'Gravestone', text: jokes[k] }]) }); }
+        M.prop('deadtree', x - 6, y - 1); M.prop('candles', x + 6, y);
+        M.reserve(x - 7, y - 2, 15, 4);
+        break;
+      }
+      case 'frozenruins': {
+        for (let k = 0; k < 5; k++) M.prop('frozenknight', x - 4 + k * 2, y + (k % 2));
+        M.chest(chestId(), x, y - 3, { loot: [gearId(), 'ether_large'], gold: 60 + lv * 15, tier: 'iron' });
+        M.sign(x - 5, y + 2, 'An army frozen mid-charge.\nSomeone has put a hat on one of them.');
+        M.reserve(x - 6, y - 4, 13, 8);
+        break;
+      }
+      case 'snowman': {
+        M.prop('snowman', x, y);
+        M.interact({ x, y: y + 1, r: 22, label: 'Talk', fn: frosty });
+        M.reserve(x - 1, y - 1, 3, 3);
+        break;
+      }
+      case 'mirage': {
+        { const root = M.__root || M; root.extrasEntities = (root.extrasEntities || []).concat([{ kind: 'mirage', x: (x + (M.__ox || 0)) * S + 8, y: (y + (M.__oy || 0)) * S + 8 }]); }
+        break;
+      }
+    }
+  }
   function clearProps(M, x, y, w, h) {
-    M.props = M.props.filter((p) => { const tx = Math.floor(p.x / S), ty = Math.floor(p.y / S); return !(tx >= x && tx < x + w && ty >= y && ty < y + h); });
+    const root = M.__root || M; x += M.__ox || 0; y += M.__oy || 0;
+    root.props = root.props.filter((p) => { const tx = Math.floor(p.x / S), ty = Math.floor(p.y / S); return !(tx >= x && tx < x + w && ty >= y && ty < y + h); });
   }
 
   // ================================================================== interactions
@@ -558,4 +564,6 @@
 
   // ================================================================== apply
   for (const [id, cfg] of Object.entries(EXT)) extendMap(id, cfg);
+  // shared with the wilderness generator (data/wilds.js)
+  R.Ext = { EXT, offsetBuilder, placePOI, clearProps, discover, potionFor, LOOT_BAND, fish, bless };
 })(window.RPG);
