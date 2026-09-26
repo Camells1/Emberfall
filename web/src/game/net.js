@@ -608,7 +608,7 @@
             const c = el('div', 'mp-code', U.esc(N.code), body);
             c.title = 'Click to copy';
             c.onclick = () => { try { navigator.clipboard.writeText(N.code); UI.toast('Room code copied!', 'good'); } catch (e) { /* ignore */ } };
-            el('div', 'hint', 'They open Emberfall, load their character, press Esc → Multiplayer → type the code → Join.' + (N.password ? ' (Password protected.)' : ''), body);
+            el('div', 'hint', 'They open Emberfall, click Multiplayer on the title screen (or press Esc → Multiplayer in game), type the code and click Join.' + (N.password ? ' (Password protected.)' : ''), body);
           } else {
             el('div', 'mp-status', `<b>You are hosting</b> on port ${N.port}${N.password ? ' (password protected)' : ''}. Friends join with one of these addresses:`, body);
             const list = el('div', 'mp-addrs', null, body);

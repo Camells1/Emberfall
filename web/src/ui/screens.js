@@ -20,11 +20,12 @@
       const latest = R.Save.latest();
       if (latest) UI.button(menu, `Continue <small>${U.esc(latest.name)} · Lv ${latest.level} ${raceName(latest.race)} ${R.Classes[latest.cls] ? R.Classes[latest.cls].name : ''}</small>`, () => { UI.close(true); R.Save.load(latest.slot); }, 'big');
       UI.button(menu, 'New Game', () => UI.open('create'), 'big');
+      if (R.Net && R.Net.available()) UI.button(menu, 'Multiplayer <small>Play online with friends</small>', () => UI.open('saves', { mode: 'mp', back: 'title' }), 'big');
       UI.button(menu, 'Load Game', () => UI.open('saves', { mode: 'load', back: 'title' }));
       UI.button(menu, 'Settings', () => UI.open('settings', { back: 'title' }));
       UI.button(menu, 'Controls', () => UI.open('controls', { back: 'title' }));
       if (isElectron()) UI.button(menu, 'Quit', () => window.electronAPI.quit());
-      el('div', 'title-foot', 'v1.3 · Built with love and procedurally drawn pixels · Arrow keys / gamepad work in menus', box);
+      el('div', 'title-foot', 'v1.3.1 · Built with love and procedurally drawn pixels · Arrow keys / gamepad work in menus', box);
     },
     back() {},
   };
@@ -225,13 +226,14 @@
       inp.onkeydown = (e) => { if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'ArrowDown') { inp.blur(); e.preventDefault(); } };
       appearanceEditor(right, cc, ['race', 'body', 'face', 'hair', 'extras']);
       const foot = el('div', 'cc-foot', null, box);
-      UI.button(foot, '← Back', () => UI.open('title'));
+      UI.button(foot, '← Back', () => { mpAfterCreate = false; UI.open('title'); });
       UI.button(foot, 'Begin Adventure →', () => {
         const name = (cc.name || '').trim() || U.choose(['Aldric', 'Seren', 'Kael', 'Mira', 'Thorne', 'Lyra', 'Bram', 'Nyx']);
         const data = { player: { name, cls: cc.cls, race: cc.race, appearance: Object.assign({}, cc.a) }, isNew: true };
         cc = null;
         UI.close(true);
         R.startGame(data);
+        if (mpAfterCreate) { mpAfterCreate = false; R.World.later(6, () => UI.toast('Ready for co-op? Press Esc → Multiplayer to host or join.', 'quest')); }
       }, 'primary big');
       if (!cc.focused) { cc.focused = true; setTimeout(() => { if (!R.Input.usingPad) inp.focus(); }, 50); }
     },
@@ -632,7 +634,9 @@
     pause: true,
     build(m, arg) {
       arg = arg || { mode: 'load', back: R.state === 'play' ? 'pause' : 'title' };
-      const body = UI.frame(m, arg.mode === 'save' ? 'Save Game' : 'Load Game', 'saves-frame');
+      const mp = arg.mode === 'mp';
+      const body = UI.frame(m, arg.mode === 'save' ? 'Save Game' : mp ? 'Multiplayer — Pick Your Character' : 'Load Game', 'saves-frame');
+      if (mp) el('div', 'hint', 'Choose who you want to play as. Next you can host a game (and get a room code) or join a friend with theirs.', body);
       const slots = arg.mode === 'save' ? [1, 2, 3] : ['auto', 1, 2, 3];
       for (const s of slots) {
         const info = R.Save.info(s);
@@ -641,17 +645,20 @@
         if (info && info.appearance) port.appendChild(UI.pix(C().portrait(info.appearance, {}), 3));
         el('div', 'save-info', info ? `<b>${s === 'auto' ? 'Autosave' : 'Slot ' + s}: ${U.esc(info.name)}</b><small>Level ${info.level} ${U.esc(raceName(info.race))} ${R.Classes[info.cls] ? R.Classes[info.cls].name : ''} · ${U.esc(R.Maps[info.map] ? R.Maps[info.map].name : info.map)} · ${fmtTime(info.playtime)} · ${new Date(info.time).toLocaleString()}</small>` : `<b>${s === 'auto' ? 'Autosave' : 'Slot ' + s}</b><small>Empty</small>`, row);
         if (arg.mode === 'save') UI.button(row, info ? 'Overwrite' : 'Save', () => { if (R.Save.save(s)) { UI.toast('Game saved', 'good'); R.Audio.play('quest'); UI.refresh(); } else UI.toast('Save failed', 'bad'); }, 'primary');
+        else if (info && mp) UI.button(row, 'Play', () => { UI.close(true); R.Save.load(s); UI.open('multiplayer'); }, 'primary');
         else if (info) UI.button(row, 'Load', () => { UI.close(true); R.Save.load(s); }, 'primary');
-        if (info && s !== 'auto') {
+        if (info && s !== 'auto' && !mp) {
           const del = UI.button(row, 'Delete', () => {
             if (del.dataset.confirm) { R.Save.remove(s); UI.refresh(); }
             else { del.dataset.confirm = 1; del.textContent = 'Really delete?'; UI.toast('Click again to delete this save'); setTimeout(() => { if (del.isConnected) { delete del.dataset.confirm; del.textContent = 'Delete'; } }, 3000); }
           }, 'small danger');
         }
       }
+      if (mp) UI.button(body, '+ Make a new character', () => { mpAfterCreate = true; UI.open('create'); });
       UI.button(body, '← Back', () => UI.back());
     },
   };
+  let mpAfterCreate = false;
 
   S.settings = {
     build(m, arg) {
