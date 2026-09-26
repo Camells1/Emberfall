@@ -71,6 +71,7 @@
       if (this.hp <= 0) this.hp = this.stats.maxHp;
     }
 
+    get sortY() { return this.air ? this.y + 60 : this.y; }
     recalc() {
       this.stats = R.Stats.compute(this);
       if (this.hp > this.stats.maxHp) this.hp = this.stats.maxHp;

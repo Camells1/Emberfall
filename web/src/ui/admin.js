@@ -4,7 +4,13 @@
 // mount and pet, all bosses beaten, all quests done, every waypoint, and a mountain of gold.
 (function (R) {
   const U = R.U, UI = R.UI, el = UI.el, S = UI.screens;
-  const A = R.Admin = { god: false, oneHit: false, fast: false };
+  const A = R.Admin = { god: false, oneHit: false, fast: false, MIN_LEVEL: 30 };
+  // Admin settings belong to each saved game (kept in the world flags, so they save with it).
+  const KEYS = ['god', 'oneHit', 'fast'];
+  const loadState = () => { const f = (R.World.flags && R.World.flags.adminCheats) || {}; for (const k of KEYS) A[k] = !!f[k]; };
+  const saveState = () => { if (!R.World.flags) return; const f = {}; for (const k of KEYS) if (A[k]) f[k] = 1; if (Object.keys(f).length) R.World.flags.adminCheats = f; else delete R.World.flags.adminCheats; };
+  let lastFlags = null;
+  R.events.on('enter', () => { if (R.World.flags !== lastFlags) { lastFlags = R.World.flags; loadState(); } });
   // The code itself is not in the game files: only its SHA-256 fingerprint is, and we compare
   // the fingerprint of what you type against it.
   const CODE_HASH = '9e112d54efe9d4c19917856a1b93680381c9dc9fd447d9f5c68a28791e594ca0';
@@ -19,6 +25,8 @@
   // ------------------------------------------------------------------ cheats applied every frame
   R.events.on('tick', () => {
     const p = R.World.player; if (!p || p.dead) return;
+    if (R.World.flags !== lastFlags) { lastFlags = R.World.flags; loadState(); p.recalc(); } // another save was loaded
+    if (p.level < A.MIN_LEVEL && (A.god || A.oneHit || A.fast)) { A.god = A.oneHit = A.fast = false; saveState(); p.recalc(); }
     if (A.god) { p.invuln = Math.max(p.invuln, 0.2); p.hp = p.stats.maxHp; p.mp = p.stats.maxMp; p.stamina = p.maxStamina(); p.tired = false; }
   });
   const dmg = R.Combat.damage;
@@ -101,10 +109,15 @@
       ci.onkeydown = (e) => { if (e.code === 'Enter') tryCode(); if (e.code === 'Escape') ci.blur(); };
       UI.button(codeRow, 'Unlock', tryCode, 'primary');
       if (W.flags.adminUnlocked) el('div', 'hint', '✓ This character already used the code.', body);
+      // the tools are for level 30 characters only
+      if (p.level < A.MIN_LEVEL) {
+        el('div', 'adm-locked', `🔒 <b>The admin tools unlock at level ${A.MIN_LEVEL}.</b><br>You are level ${p.level}. Keep adventuring!`, body);
+        return;
+      }
       // toggles
       el('div', 'sec-title', 'Cheats', body);
       const tg = el('div', 'adm-grid', null, body);
-      const toggle = (label, key) => UI.button(tg, `${label}: <b>${A[key] ? 'ON' : 'off'}</b>`, () => { A[key] = !A[key]; p.recalc(); UI.refresh(); }, A[key] ? 'sel' : '');
+      const toggle = (label, key) => UI.button(tg, `${label}: <b>${A[key] ? 'ON' : 'off'}</b>`, () => { A[key] = !A[key]; saveState(); p.recalc(); UI.refresh(); }, A[key] ? 'sel' : '');
       toggle('God mode', 'god'); toggle('One-hit kills', 'oneHit'); toggle('Double speed', 'fast');
       UI.button(tg, 'Full heal', () => { p.hp = p.stats.maxHp; p.mp = p.stats.maxMp; p.status = {}; R.Audio.play('heal'); });
       UI.button(tg, '+1 level', () => { if (p.level < R.MAX_LEVEL) p.gainXp(R.xpForLevel(p.level) - p.xp + 1); UI.refresh(); });
@@ -128,7 +141,7 @@
         const e = W.spawnEnemy(d.id, p.x + 90, p.y, Math.max(d.level, p.level));
         if (e) { e.state = 'chase'; e.noLoot = false; }
       }, 'small');
-      el('div', 'hint', 'F10 opens this panel. The cheats only change your own game.', body);
+      el('div', 'hint', 'F10 opens this panel. Admin settings are saved with this game only, and they only change your own game.', body);
     },
   };
   // F10 anywhere in play
@@ -143,7 +156,8 @@
     pb.call(this, m);
     const menu = m.querySelector('.title-menu');
     const quit = [...menu.querySelectorAll('button')].pop();
-    const b = UI.button(menu, 'Admin Panel <small>F10</small>', () => UI.open('admin', { back: 'pause' }));
+    const lvOk = R.World.player && R.World.player.level >= A.MIN_LEVEL;
+    const b = UI.button(menu, `Admin Panel <small>${lvOk ? 'F10' : '🔒 level ' + A.MIN_LEVEL}</small>`, () => UI.open('admin', { back: 'pause' }));
     menu.insertBefore(b, quit);
   };
 })(window.RPG);

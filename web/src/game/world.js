@@ -393,6 +393,7 @@
       if (tx < 0 || ty < 0 || tx >= M.w || ty >= M.h) return true;
       const i = ty * M.w + tx;
       if (M.solid[i] && !(flying && !M.sight[i] && !M.block[i])) return true;
+      if (flying === 'air') continue; // flying mounts go over trees, rocks and houses
       const bs = M.boxes.get(i);
       if (bs) for (const b of bs) if (x + hw > b.x && x - hw < b.x + b.w && bot > b.y && top < b.y + b.h) return true;
     }
@@ -403,7 +404,7 @@
   W.onRoad = (x, y) => ROADS.has(W.tileAt(x, y - 2));
   // Moves with sliding; returns true if moved at all.
   W.moveEntity = function (e, dx, dy) {
-    const flying = e.def && e.def.tags && e.def.tags.includes('flying');
+    const flying = e.air ? 'air' : e.def && e.def.tags && e.def.tags.includes('flying');
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 4));
     const sx = dx / steps, sy = dy / steps;
     const r = e.r || 5;
@@ -814,7 +815,7 @@
     const margin = 64;
     for (const p of M.props) if (p.x > cx - margin - 48 && p.x < cx + G.W + margin + 48 && p.y > cy - 10 && p.y < cy + G.H + 120) vis.push(p);
     for (const e of W.entities) if (e.x > cx - margin && e.x < cx + G.W + margin && e.y > cy - margin && e.y < cy + G.H + margin + 40) vis.push(e);
-    vis.sort((a, b) => a.y - b.y);
+    vis.sort((a, b) => (a.sortY != null ? a.sortY : a.y) - (b.sortY != null ? b.sortY : b.y)); // (flyers draw above the treetops)
     const pl = W.player;
     for (const o of vis) {
       if (o instanceof R.Entity) o.draw(ctx);

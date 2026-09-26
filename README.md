@@ -58,12 +58,18 @@ Up to 4 players. You can set an optional password when hosting. (There's also a 
 | Crafting recipes | B |
 | Ride / dismount · mount ability | H · Space (while riding) |
 | Stable (mounts & pets) | N |
-| Admin panel | F10 |
+| Admin panel (level 30) | F10 |
 | Menu | Esc |
 
 Gamepads work too.
 
 ## Changelog
+
+### v1.4.1
+- Flying mounts: the Ember Drake and the new Sky Gryphon (Rosa's stable, level 15) fly over trees, rocks and water
+- Mounts now face up and down as well as left and right
+- The admin panel's tools unlock at level 30, and its settings are saved per game
+- The stable (N), admin, crafting and skills menus scroll
 
 ### v1.4
 - Every outdoor region is about 10x bigger, with new points of interest, outposts and waypoints

@@ -507,3 +507,7 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
 .adm-code b { color: var(--gold); } .adm-code small { color: var(--dim); flex: 1; } .adm-code input { width: 200px; }
 .adm-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .adm-grid .btn b { color: #80ffb0; }
+.adm-locked { margin-top: 10px; padding: 14px; text-align: center; font-size: 15px; background: rgba(0,0,0,.3); border: 2px dashed var(--gold-d); border-radius: 8px; } .adm-locked b { color: var(--gold); }
+/* tall menus scroll */
+.stable-frame, .admin-frame, .skills-frame, .cr-frame { max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+.stable-frame .frame-body, .admin-frame .frame-body, .skills-frame .frame-body { overflow-y: auto; }

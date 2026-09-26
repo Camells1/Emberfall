@@ -21,7 +21,8 @@
     unicorn: { name: 'Starlight Unicorn', style: 'horse', spd: 1.9, body: '#fff4ff', mane: '#ff90e0', hoof: '#c0a0ff', horn: '#ffe070', glow: '#ffb0ff', drop: ['briar_queen', 0.3], from: 'Queen Briarthorn (rare)' },
     nightmare: { name: 'Nightmare', style: 'horse', spd: 1.9, body: '#1a1418', mane: '#ff6020', hoof: '#ff8030', eye: '#ff4020', flame: true, glow: '#ff6020', drop: ['infernal', 0.3], from: 'Pyrrhus, the Molten Titan (rare)' },
     chicken: { name: 'Colossal Hen', style: 'chicken', spd: 1.65, body: '#fff8e8', comb: '#e03030', from: '??? (the hens remember)' },
-    drake: { name: 'Ember Drake', style: 'dragon', spd: 2.0, body: '#8a2a2a', belly: '#e0a060', wing: '#5a1a1a', eye: '#ffe040', drop: ['hollow_king', 0.25], from: 'Malgrath, the Hollow King (rare)' },
+    gryphon: { name: 'Sky Gryphon', style: 'dragon', spd: 1.9, fly: true, body: '#c89040', belly: '#f4ecd8', wing: '#8a6030', eye: '#ffe040', price: 6000, level: 15, from: 'Stable master, Havenbrook (level 15)' },
+    drake: { name: 'Ember Drake', style: 'dragon', spd: 2.0, fly: true, body: '#8a2a2a', belly: '#e0a060', wing: '#5a1a1a', eye: '#ffe040', drop: ['hollow_king', 0.25], from: 'Malgrath, the Hollow King (rare)' },
     voidsteed: { name: 'Void Strider', style: 'horse', spd: 2.0, body: '#2a1a4a', mane: '#c080ff', hoof: '#8040ff', eye: '#ff40ff', stars: true, glow: '#c080ff', drop: ['watcher', 0.3], from: 'Ulthuun, the Watcher Beyond (rare)' },
   };
   // ================================================================== pets
@@ -104,27 +105,102 @@
       P.rect(15, 10 + bob, 10, 2, '#6a3a1a');
     }
   }
+
+  // Front ('down') and back ('up') views: 44x40, feet at (22, 38). Two layers so the rider sits
+  // between them: 'base' (drawn under the rider) and 'top' (drawn over the rider's legs).
+  function drawMountV(P, m, f, moving, view, layer) {
+    const st = m.style, b = m.body, dk = U.shade(b, -0.2);
+    const lift = moving ? [[2, 0], [0, 2], [0, 0], [2, 0]][f] : [0, 0];
+    const bob = moving ? [0, -1, 0, 1][f] : 0;
+    const legPair = (xs, top, len, c, hoof) => xs.forEach((x, i) => { const up = i % 2 ? lift[1] : lift[0]; P.rect(x, top - up, 3, len, c); if (hoof) P.rect(x, top - up + len - 2, 3, 2, hoof); });
+    const front = view === 'down';
+    if (layer === 'base') {
+      if (st === 'dragon') { const w = moving ? f % 2 : 0; P.rect(2, 12 - w * 3 + bob, 14, 5, m.wing); P.rect(28, 12 - w * 3 + bob, 14, 5, m.wing); P.rect(0, 9 - w * 4 + bob, 6, 4, m.wing); P.rect(38, 9 - w * 4 + bob, 6, 4, m.wing); }
+      if (st === 'crab') {
+        for (let i = 0; i < 3; i++) { const o = moving ? (f + i) % 2 : 0; P.rect(6 - i * 2, 26 + i * 3 - o, 5, 2, dk); P.rect(33 + i * 2, 26 + i * 3 - (1 - o), 5, 2, dk); }
+        P.ellipse(22, 24 + bob, 14, 8, m.shell); P.ellipse(22, 27 + bob, 12, 5, b);
+        P.rect(2, 16 + bob, 7, 6, b); P.rect(35, 16 + bob, 7, 6, b); P.rect(15, 14 + bob, 14, 3, '#6a3a1a');
+        if (front) { P.px(18, 22 + bob, m.eye); P.px(26, 22 + bob, m.eye); }
+        return;
+      }
+      if (!front) { // head and neck far away, behind the rider
+        if (st === 'wolf') { P.rect(17, 6 + bob, 10, 8, b); P.rect(17, 3 + bob, 3, 4, b); P.rect(24, 3 + bob, 3, 4, b); }
+        else if (st === 'chicken') { P.rect(18, 4 + bob, 8, 9, b); P.rect(19, 2 + bob, 6, 3, m.comb); }
+        else if (st === 'raptor' || st === 'dragon') { P.rect(19, 3 + bob, 6, 12, b); if (st === 'dragon') { P.px(19, 1 + bob, '#e0d0c0'); P.px(24, 1 + bob, '#e0d0c0'); } }
+        else { P.rect(19, 4 + bob, 6, 12, b); P.rect(20, 1 + bob, 2, 4, b); P.rect(23, 1 + bob, 2, 4, b); P.rect(21, 5 + bob, 2, 10, m.mane || dk);
+          if (m.horn) P.rect(21, 0 + bob, 2, 3, m.horn);
+          if (st === 'elk') { P.rect(15, 0 + bob, 5, 1, m.antler); P.rect(24, 0 + bob, 5, 1, m.antler); P.rect(17, 0 + bob, 1, 4, m.antler); P.rect(26, 0 + bob, 1, 4, m.antler); } }
+      }
+      // legs and body
+      if (st === 'raptor' || st === 'chicken') legPair([17, 24], 28 + bob, 10, st === 'chicken' ? '#e0a020' : dk, st === 'chicken' ? null : '#3a2a20');
+      else legPair([14, 18, 23, 27], 27 + bob, 11, dk, m.hoof || '#2a2a30');
+      const bw = st === 'chicken' ? 10 : st === 'wolf' ? 8 : 9, bh = st === 'chicken' ? 9 : 10;
+      P.ellipse(22, 22 + bob, bw, bh, b); P.ellipse(22, 19 + bob, bw - 2, bh - 4, U.shade(b, 0.1));
+      if (st === 'dragon') P.ellipse(22, 25 + bob, 5, 5, m.belly);
+      if (m.armor) { P.rect(14, 17 + bob, 16, 9, m.armor); P.rect(14, 17 + bob, 16, 1, m.trim); }
+      if (m.stars) for (const [x, y] of [[17, 18], [26, 21], [21, 26], [24, 16]]) P.px(x, y + bob, '#ffffff');
+      P.rect(16, 14 + bob, 12, 4, '#6a3a1a'); // saddle
+      return;
+    }
+    // ---- 'top' layer: drawn over the rider's legs
+    if (st === 'crab') return;
+    if (front) { // neck + head coming toward us
+      if (st === 'wolf') { P.rect(16, 24 + bob, 12, 9, b); P.rect(16, 21 + bob, 3, 4, b); P.rect(25, 21 + bob, 3, 4, b); P.rect(19, 30 + bob, 6, 4, U.shade(b, -0.1)); P.px(21, 33 + bob, '#140c1c'); P.px(22, 33 + bob, '#140c1c'); P.px(19, 27 + bob, m.eye); P.px(24, 27 + bob, m.eye); }
+      else if (st === 'chicken') { P.rect(17, 22 + bob, 10, 10, b); P.px(19, 25 + bob, '#140c1c'); P.px(24, 25 + bob, '#140c1c'); P.rect(20, 27 + bob, 4, 3, '#e0a020'); P.rect(18, 19 + bob, 8, 3, m.comb); P.rect(21, 30 + bob, 2, 3, m.comb); }
+      else if (st === 'raptor') { P.rect(18, 20 + bob, 8, 12, b); P.rect(19, 30 + bob, 6, 3, '#ffffff'); P.px(19, 24 + bob, m.eye); P.px(24, 24 + bob, m.eye); }
+      else if (st === 'dragon') { P.rect(18, 20 + bob, 8, 13, b); P.rect(19, 30 + bob, 6, 3, m.belly); P.px(19, 23 + bob, m.eye); P.px(24, 23 + bob, m.eye); P.px(18, 19 + bob, '#e0d0c0'); P.px(25, 19 + bob, '#e0d0c0'); }
+      else {
+        P.rect(19, 20 + bob, 6, 8, b); P.rect(18, 25 + bob, 8, 8, b); P.rect(19, 31 + bob, 6, 3, U.shade(b, -0.25));
+        P.px(19, 27 + bob, m.eye || '#140c1c'); P.px(24, 27 + bob, m.eye || '#140c1c');
+        P.rect(18, 22 + bob, 2, 3, b); P.rect(24, 22 + bob, 2, 3, b); P.rect(21, 20 + bob, 2, 6, m.mane || dk);
+        if (m.armor) P.rect(19, 25 + bob, 6, 2, m.armor);
+        if (m.horn) { P.rect(21, 17 + bob, 2, 4, m.horn); P.px(21, 16 + bob, m.horn); }
+        if (st === 'elk') { P.rect(14, 19 + bob, 5, 1, m.antler); P.rect(25, 19 + bob, 5, 1, m.antler); P.rect(15, 16 + bob, 1, 4, m.antler); P.rect(28, 16 + bob, 1, 4, m.antler); }
+        if (m.flame) for (let i = 0; i < 4; i++) P.px(21 + (i % 2), 18 + i * 2 + bob - ((f + i) % 2), i % 2 ? '#ffd040' : '#ff6020');
+      }
+    } else { // tail toward us
+      const tc = st === 'wolf' || st === 'chicken' || st === 'raptor' || st === 'dragon' ? b : (m.mane || dk);
+      if (st === 'chicken') { P.rect(17, 24 + bob, 10, 6, U.shade(b, -0.08)); }
+      else { const sway = moving ? [0, 1, 0, -1][f] : 0; P.rect(20 + sway, 28 + bob, 4, st === 'raptor' || st === 'dragon' ? 10 : 8, tc); if (st === 'wolf') P.rect(20 + sway, 35 + bob, 4, 2, U.shade(b, 0.25)); }
+    }
+  }
+  function mountSpriteV(id, f, moving, view, layer) {
+    const m = MOUNTS[id];
+    return G.sprite('mountv|' + id + '|' + f + '|' + (moving ? 1 : 0) + view + layer, 44, 40, (c) => drawMountV(G.painter(c), m, f, moving, view, layer), { outline: true });
+  }
   const SEAT = { horse: 13, elk: 13, wolf: 11, raptor: 12, dragon: 13, chicken: 12, crab: 12 };
   function mountSprite(id, f, moving) {
     const m = MOUNTS[id];
     return G.sprite('mount|' + id + '|' + f + '|' + (moving ? 1 : 0), 40, 32, (c) => { c.translate(0, 2); drawMount(G.painter(c), m, f, moving); }, { outline: true });
   }
   // Draw a mount with its rider. drawRider(yOffset) draws the character.
-  CP.drawRiding = function (ctx, x, y, mountId, face, moving, t, drawRider, alpha) {
+  // Draw a mount with its rider. dir: 'left' | 'right' | 'up' | 'down'. drawRider(yOffset, dir) draws the character.
+  CP.drawRiding = function (ctx, x, y, mountId, dir, moving, t, drawRider, alpha) {
     const m = MOUNTS[mountId]; if (!m) return false;
-    const f = moving ? Math.floor(t * 12) % 4 : Math.floor(t * 2) % 2 ? 0 : 0;
-    const spr = mountSprite(mountId, f, moving);
+    const f = m.fly ? Math.floor(t * 6) % 2 * 2 + (moving ? 1 : 0) : moving ? Math.floor(t * 12) % 4 : 0;
+    const bob = m.fly ? 0 : moving ? [0, -1, 0, 1][f] : 0;
     ctx.save();
     if (alpha != null) ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(x, y, 15, 4, 0, 0, U.TAU); ctx.fill();
+    ctx.fillStyle = m.fly ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(x, y, dir === 'up' || dir === 'down' ? 11 : 15, 4, 0, 0, U.TAU); ctx.fill();
+    if (m.fly) { y -= 16 + Math.sin(t * 3) * 3; moving = true; } // up in the air, wings always flapping
     if (m.glow && R.settings.fancy !== false) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3; ctx.drawImage(G.glow(20, m.glow), Math.round(x - 20), Math.round(y - 30)); ctx.globalAlpha = alpha != null ? alpha : 1; ctx.globalCompositeOperation = 'source-over'; }
-    ctx.translate(Math.round(x), Math.round(y));
-    if (face === 'left') ctx.scale(-1, 1);
-    ctx.drawImage(spr, -20, -30);
-    ctx.restore();
-    const bob = moving ? [0, -1, 0, 1][f] : 0;
-    drawRider(-(SEAT[m.style] || 12) + bob);
-    if (m.flame && moving && Math.random() < 0.5) FX.particle({ x: x + (face === 'left' ? 12 : -12) + U.rand(-4, 4), y: y - 2, vy: -20, life: 0.4, color: U.choose(['#ff6020', '#ffd040']), glow: true, size: 2 });
+    const X = Math.round(x), Y = Math.round(y);
+    if (dir === 'up' || dir === 'down') {
+      ctx.drawImage(mountSpriteV(mountId, f, moving, dir, 'base'), X - 22, Y - 38);
+      ctx.restore();
+      drawRider(-(SEAT[m.style] || 12) - 2 + bob, dir);
+      ctx.save(); if (alpha != null) ctx.globalAlpha = alpha;
+      ctx.drawImage(mountSpriteV(mountId, f, moving, dir, 'top'), X - 22, Y - 38);
+      ctx.restore();
+    } else {
+      ctx.translate(X, Y);
+      if (dir === 'left') ctx.scale(-1, 1);
+      ctx.drawImage(mountSprite(mountId, f, moving), -20, -30);
+      ctx.restore();
+      drawRider(-(SEAT[m.style] || 12) + bob, dir);
+    }
+    const back = dir === 'left' ? 12 : dir === 'right' ? -12 : 0, backY = dir === 'down' ? -14 : dir === 'up' ? 2 : -2;
+    if (m.flame && moving && Math.random() < 0.5) FX.particle({ x: x + back + U.rand(-4, 4), y: y + backY, vy: -20, life: 0.4, color: U.choose(['#ff6020', '#ffd040']), glow: true, size: 2 });
     if (m.stars && Math.random() < 0.3) FX.particle({ x: x + U.rand(-12, 12), y: y - U.rand(4, 20), life: 0.5, color: '#e0c0ff', glow: true, size: 1 });
     return true;
   };
@@ -227,24 +303,37 @@
     }
     for (const e of W.entities) if (e.isPet && (!owners.some(([o]) => o === e.owner))) e.remove = true;
   }
-  R.events.on('enter', () => { const p = R.World.player; if (p && p.riding && !R.World.def.outdoor) CP.dismount(p, true); syncPets(); });
+  R.events.on('enter', () => { const p = R.World.player; if (p && p.riding && !R.World.def.outdoor) { p.air = false; CP.dismount(p, true); } syncPets(); });
   let syncT = 0;
   R.events.on('tick', (dt) => { syncT -= dt; if (syncT <= 0) { syncT = 0.5; syncPets(); } });
 
   // ================================================================== riding
   CP.canRide = (p) => R.World.def && R.World.def.outdoor;
+  // Nearest spot where you can stand (for landing a flying mount).
+  CP.landing = function (p) {
+    const W = R.World;
+    if (!W.collides(p.x, p.y, p.r)) return { x: p.x, y: p.y };
+    for (let r = 8; r <= 120; r += 8) for (let a = 0; a < 16; a++) { const x = p.x + Math.cos(a / 16 * U.TAU) * r, y = p.y + Math.sin(a / 16 * U.TAU) * r; if (!W.collides(x, y, p.r)) return { x, y }; }
+    return null;
+  };
   CP.mountUp = function (p) {
     if (!p.mount || !MOUNTS[p.mount]) { R.UI.toast('You have no mount yet — visit the stable master in Havenbrook (N shows your stable).', 'bad'); return; }
     if (!CP.canRide(p)) { R.UI.toast('You can only ride outdoors.', 'bad'); return; }
     if (R.World.combatT > 0.5) { R.UI.toast("Can't mount up during a fight!", 'bad'); R.Audio.play('error'); return; }
     if (p.dead || p.rollT > 0) return;
-    p.riding = true; p.recalc();
+    p.riding = true; p.air = !!MOUNTS[p.mount].fly; p.recalc();
+    if (p.air) R.UI.toast('Up in the air! Fly over trees and rocks. (Press H over open ground to land.)', 'good');
     FX.burst(p.x, p.y - 6, { n: 20, colors: ['#e0d0b0', '#ffffff'], speed: 60, life: 0.5 });
     R.Audio.play('whoosh', { pitch: 0.8 }); R.Audio.play('step', { pitch: 0.6 });
   };
   CP.dismount = function (p, quiet) {
     if (!p.riding) return;
-    p.riding = false; p.recalc();
+    if (p.air) {
+      const spot = CP.landing(p);
+      if (!spot) { if (!quiet) R.UI.toast('Nowhere to land here. Fly over open ground first.', 'bad'); return false; }
+      p.x = spot.x; p.y = spot.y;
+    }
+    p.riding = false; p.air = false; p.recalc();
     if (!quiet) { FX.burst(p.x, p.y - 6, { n: 14, colors: ['#e0d0b0', '#ffffff'], speed: 50, life: 0.4 }); R.Audio.play('step', { pitch: 0.8 }); }
   };
   CP.speed = (p) => (p.riding && MOUNTS[p.mount] ? MOUNTS[p.mount].spd : 1);
@@ -273,6 +362,7 @@
     unicorn: { name: 'Rainbow Blessing', cd: 25, desc: 'Heal yourself (and nearby friends) for 30% health.', fn: (p) => { C.heal(p, p.stats.maxHp * 0.3); FX.pillar(p.x, p.y, '#ffb0ff', 1.2, 18); FX.burst(p.x, p.y - 10, { n: 40, colors: ['#ff8080', '#ffd080', '#80ff80', '#80c0ff', '#c080ff'], speed: 70, life: 1, glow: true }); R.Audio.play('heal'); } },
     nightmare: { name: 'Hellfire Trail', cd: 12, desc: 'Your hooves burn the ground for 4 seconds; enemies in the flames burn.', fn: (p) => { for (let i = 0; i < 16; i++) R.World.later(i * 0.25, () => { if (!p.riding) return; const x = p.x, y = p.y; if (FX.bfx) FX.bfx('cloud', x, y, 12, '#ff5010', 2); for (let k = 0; k < 4; k++) R.World.later(k * 0.5, () => hurt(p, x, y, 14, 0.25, { status: { burn: { dps: 6 + p.level, dur: 2 } }, noText: true })); }); R.Audio.play('fire'); } },
     chicken: { name: 'Egg Barrage', cd: 8, desc: 'Lay a volley of exploding eggs behind you. (Why do they explode? Nobody knows.)', fn: (p) => { for (let i = 0; i < 5; i++) R.World.later(i * 0.1, () => { const a = p.aim + (i - 2) * 0.3, rr = C.roll(p, 0.9); C.projectile({ x: p.x, y: p.y - 6, z: 8, angle: a, speed: 160, dmg: 0, team: 'player', kind: 'orb', r: 4, size: 4, life: 0.6, color: '#fff8e8', source: p, onHit(pr) { pr.expire(); return false; }, onExpire(pr) { C.explode(pr.x, pr.y, 22, rr.dmg, 'player', { color: '#ffe080', source: p }); } }); }); R.Audio.play('talk', { pitch: 2 }); FX.text(p.x, p.y - 30, 'BAWK!', '#fff4c0'); } },
+    gryphon: { name: 'Dive Bomb', cd: 9, desc: 'Swoop down on the cursor, slamming enemies below.', fn: (p) => { const t = { x: R.Input.mouse.x, y: R.Input.mouse.y }, d = Math.min(150, U.dist(p.x, p.y, t.x, t.y)), a = U.angle(p.x, p.y, t.x, t.y); dashTo(p, a, d, 8); R.World.later(0.26, () => { hurt(p, p.x, p.y, 44, 1.9, { knock: 220 }); FX.shake(5, 0.25); if (FX.bfx) FX.bfx('wavering', p.x, p.y, 8, 60, '#e0c080', 0.4); }); R.Audio.play('whoosh', { pitch: 0.8 }); } },
     drake: { name: 'Fire Breath', cd: 10, desc: 'Breathe a cone of fire in front of you.', fn: (p) => { const a = p.aim; for (let i = 0; i < 10; i++) R.World.later(i * 0.06, () => { const ang = a + U.rand(-0.35, 0.35); C.projectile({ x: p.x + Math.cos(ang) * 12, y: p.y - 14, z: 12, angle: ang, speed: 220, dmg: C.roll(p, 0.45).dmg, team: 'player', kind: 'fireball', r: 4, size: 4, life: 0.5, source: p, status: { burn: { dps: 5 + p.level, dur: 2 } } }); }); R.Audio.play('fire', { pitch: 0.7 }); } },
     voidsteed: { name: 'Void Step', cd: 7, desc: 'Blink forward through space.', fn: (p) => { const a = aimOf(p); burst(p, '#c080ff'); for (let d = 150; d > 20; d -= 10) { const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d; if (!R.World.collides(x, y, 5)) { p.x = x; p.y = y; break; } } burst(p, '#c080ff'); p.invuln = Math.max(p.invuln, 0.3); R.Audio.play('portal', { pitch: 1.7 }); } },
   };
@@ -294,7 +384,7 @@
       if (Input.hit('dodge')) { Input.pressed.delete('Space'); this.dodgeBuf = 0; CP.useAbility(this); }
       let act = Input.hit('heavy') || (Input.held('attack') && !R.UI.pointerOverUI);
       for (let i = 0; i < 4; i++) if (Input.hit('skill' + (i + 1))) act = true;
-      if (act) CP.dismount(this);
+      if (act && CP.dismount(this) === false) this.atkCd = Math.max(this.atkCd, 0.2); // can't land here: no attacking from the air
     }
     return origUpdate.call(this, dt);
   };
@@ -303,17 +393,19 @@
   const origDraw = Pl.draw;
   Pl.draw = function (ctx) {
     if (!this.riding || this.dead || !MOUNTS[this.mount]) return origDraw.call(this, ctx);
+    if (Math.hypot(this.vx, this.vy) > 10) this.dir = Math.abs(this.vx) > Math.abs(this.vy) * 1.2 ? (this.vx > 0 ? 'right' : 'left') : (this.vy > 0 ? 'down' : 'up');
     const face = this.facingSide = this.dir === 'left' ? 'left' : this.dir === 'right' ? 'right' : (this.facingSide || 'right');
     const moving = Math.hypot(this.vx, this.vy) > 10;
     const a = this.appearance, gear = this.gear();
-    CP.drawRiding(ctx, this.x, this.y, this.mount, face, moving, this.animT, (oy) => R.Character.draw(ctx, this.x, this.y + oy, a, gear, face, 'idle', 0, { flash: this.flash > 0 ? '#ffffff' : null }));
+    const rdir = this.dir === 'up' || this.dir === 'down' ? this.dir : face;
+    CP.drawRiding(ctx, this.x, this.y, this.mount, rdir, moving, this.animT, (oy, d) => R.Character.draw(ctx, this.x, this.y + oy, a, gear, d, 'idle', 0, { flash: this.flash > 0 ? '#ffffff' : null }));
   };
   // the stats recalc applies riding speed
   const compute = R.Stats.compute;
   R.Stats.compute = function (pl) { const s = compute.call(this, pl); if (pl.riding && MOUNTS[pl.mount]) s.spd = s.spd * MOUNTS[pl.mount].spd; return s; };
   // getting hit knocks you out of the saddle
   const dmg = R.Combat.damage;
-  R.Combat.damage = function (t, amount) { if (t && t.riding && amount > 0 && t === R.World.player) CP.dismount(t); return dmg.apply(this, arguments); };
+  R.Combat.damage = function (t, amount) { if (t && t.riding && !t.air && amount > 0 && t === R.World.player) CP.dismount(t); return dmg.apply(this, arguments); };
   // remote players: draw their mount too
   if (R.RemotePlayer) {
     const rd = R.RemotePlayer.prototype.draw;
@@ -321,7 +413,8 @@
       const L = this.peer.look, s = this.peer.s;
       if (!L || !s || !s.mo || !L.mt || !MOUNTS[L.mt] || this.dead) return rd.call(this, ctx);
       const face = this.dir === 'left' ? 'left' : this.dir === 'right' ? 'right' : (this.face0 || 'right'); this.face0 = face;
-      CP.drawRiding(ctx, this.x, this.y, L.mt, face, Math.hypot(s.vx, s.vy) > 10, this.animT, (oy) => R.Character.draw(ctx, this.x, this.y + oy, L.a, L.g || {}, face, 'idle', 0));
+      const rdir = this.dir === 'up' || this.dir === 'down' ? this.dir : face;
+      CP.drawRiding(ctx, this.x, this.y, L.mt, rdir, Math.hypot(s.vx, s.vy) > 10, this.animT, (oy, d) => R.Character.draw(ctx, this.x, this.y + oy, L.a, L.g || {}, d, 'idle', 0));
     };
   }
 
