@@ -16,8 +16,8 @@ On that page, click **`Emberfall-Setup-….exe`** under *Assets*, run it, and yo
 
 Everyone needs the same version of the game and an internet connection. No accounts, no extra apps, no router settings.
 
-1. **Host:** start or load your character, press **Esc → Multiplayer → Host**. You get a 5-letter **room code**.
-2. **Friends:** start or load *their own* character, press **Esc → Multiplayer**, type the code and click **Join**.
+1. **Host:** click **Multiplayer** on the title screen, pick your character, then click **Host**. You get a 5-letter **room code**.
+2. **Friends:** click **Multiplayer**, pick *their own* character, type the code and click **Join**. (In game it's also under **Esc → Multiplayer**.)
 3. That's it: you're in the host's world. Everyone keeps their own character, gear, XP, loot and quests. Monsters chase whoever is closest, and the party follows the host between areas.
 
 Up to 4 players. You can set an optional password when hosting. (There's also a direct-IP option under *Advanced* for LAN or Tailscale.)
@@ -65,7 +65,7 @@ F11 toggles fullscreen in the desktop app. The game goes quiet when it's minimiz
 
 ### v1.3
 
-- **Online co-op for up to 4 players.** Press Esc → Multiplayer. The host clicks **Host** and gets a 5-letter room code; friends type it into **Join**. Nothing else to install, no router setup. Everyone keeps their own character, loot, XP and quests; monsters target whoever is closest, and the party follows the host between areas. (Direct IP connections for LAN/Tailscale are under "Advanced".)
+- **Online co-op for up to 4 players.** Click Multiplayer on the title screen (or Esc → Multiplayer in game). The host clicks **Host** and gets a 5-letter room code; friends type it into **Join**. Nothing else to install, no router setup. Everyone keeps their own character, loot, XP and quests; monsters target whoever is closest, and the party follows the host between areas. (Direct IP connections for LAN/Tailscale are under "Advanced".)
 - **Bigger world.** Nine outdoor maps grew by roughly a third to a half: Havenbrook Outskirts, Fernhollow Glades, the Drowned Hamlet, the Glass Canyons, Skyreach Glacier, the Ashen Wastes, Gull Downs, Wildheart Thicket and the Palm Gardens. New cliffs, ruins, monster dens, camps, shrines that bless you, fishing spots, hidden chests (not all of them are chests...) and discovery XP for finding each new area.
 - **Easter eggs.** A few. Be nice to the hens.
 
