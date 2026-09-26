@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com">
+  <title>Emberfall</title>
+  <meta name="description" content="Emberfall: Legends of the Shattered Crown — a 2D action RPG with five classes, nine races, 18 regions, quests, bosses and hundreds of items.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="640" height="360"></canvas>
+    <div id="ui"></div>
+    <div id="loading">Loading Emberfall…</div>
+  </div>
+
+  <!-- core -->
+  <script src="src/core/util.js"></script>
+  <script src="src/core/input.js"></script>
+  <script src="src/core/audio.js"></script>
+
+  <!-- graphics -->
+  <script src="src/gfx/pixel.js"></script>
+  <script src="src/gfx/effects.js"></script>
+  <script src="src/gfx/character.js"></script>
+  <script src="src/gfx/weapons.js"></script>
+  <script src="src/gfx/tiles.js"></script>
+  <script src="src/gfx/tiles2.js"></script>
+  <script src="src/gfx/monsters.js"></script>
+  <script src="src/gfx/monsters2.js"></script>
+  <script src="src/gfx/icons.js"></script>
+
+  <!-- combat core (skills reference it at load time) -->
+  <script src="src/game/combat.js"></script>
+
+  <!-- data: items & gear -->
+  <script src="src/data/items.js"></script>
+  <!-- ITEMS-EXTRA (add item/gear data files here) -->
+  <script src="src/data/items_gen.js"></script>
+
+  <!-- data: classes & skills -->
+  <script src="src/data/classes.js"></script>
+  <script src="src/data/races.js"></script>
+  <script src="src/data/skills.js"></script>
+  <!-- SKILLS-EXTRA -->
+
+  <!-- data: bestiary -->
+  <script src="src/data/enemies.js"></script>
+  <script src="src/data/bosses.js"></script>
+  <!-- ENEMIES-EXTRA -->
+  <script src="src/data/items_materials.js"></script>
+
+  <!-- data: world, people, story -->
+  <script src="src/data/npcs.js"></script>
+  <script src="src/data/quests.js"></script>
+  <script src="src/data/maps.js"></script>
+  <!-- WORLD-EXTRA -->
+  <script src="src/data/items_quest.js"></script>
+  <script src="src/data/content.js"></script>
+  <script src="src/data/content2.js"></script>
+  <script src="src/data/regions.js"></script>
+  <script src="src/data/expansions.js"></script>
+
+  <!-- game systems -->
+  <script src="src/game/entities.js"></script>
+  <script src="src/game/difficulty.js"></script>
+  <script src="src/game/nav.js"></script>
+  <script src="src/game/ai.js"></script>
+  <script src="src/game/world.js"></script>
+  <script src="src/game/questlog.js"></script>
+  <script src="src/game/guide.js"></script>
+  <script src="src/game/save.js"></script>
+
+  <!-- interface -->
+  <script src="src/ui/ui.js"></script>
+  <script src="src/ui/screens.js"></script>
+  <!-- UI-EXTRA -->
+  <script src="lib/peerjs.min.js"></script>
+  <script src="src/game/net.js"></script>
+
+  <script src="src/main.js"></script>
+</body>
+</html>
