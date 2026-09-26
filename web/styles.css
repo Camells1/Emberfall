@@ -511,3 +511,8 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
 /* tall menus scroll */
 .stable-frame, .admin-frame, .skills-frame, .cr-frame { max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
 .stable-frame .frame-body, .admin-frame .frame-body, .skills-frame .frame-body { overflow-y: auto; }
+/* every menu scrolls when it's taller than the window */
+#modal > .frame { max-height: 94vh; display: flex; flex-direction: column; }
+#modal > .frame > .frame-body { overflow-y: auto; }
+#modal > .pause, #modal > .title-screen, #modal > .death { max-height: 96vh; overflow-y: auto; }
+#modal > .pause .title-menu, #modal > .title-screen .title-menu { flex-shrink: 0; }

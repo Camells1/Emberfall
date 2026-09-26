@@ -65,6 +65,9 @@ Gamepads work too.
 
 ## Changelog
 
+### v1.4.2
+- Every menu scrolls when it is taller than the window (pause menu, stable, admin panel and the rest)
+
 ### v1.4.1
 - Flying mounts: the Ember Drake and the new Sky Gryphon (Rosa's stable, level 15) fly over trees, rocks and water
 - Mounts now face up and down as well as left and right
