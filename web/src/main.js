@@ -107,8 +107,9 @@
   function tick(dt) {
     Input.pollPad();
     // world mouse coords
-    Input.mouse.x = Input.mouse.sx + W.cam.x;
-    Input.mouse.y = Input.mouse.sy + W.cam.y;
+    const hw = R.HD2D && R.HD2D.on() && R.HD2D.toWorld(Input.mouse.sx, Input.mouse.sy);
+    Input.mouse.x = hw ? hw.x : Input.mouse.sx + W.cam.x;
+    Input.mouse.y = hw ? hw.y + 10 : Input.mouse.sy + W.cam.y;
     const padInMenu = padMenus(dt);
     if (R.state === 'play') {
       if (Input.gamepad && !padInMenu && Input.hit('interact') && !UI.current) { const t = W.currentInteract; if (t && t.fn) t.fn(); }

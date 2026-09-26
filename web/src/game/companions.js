@@ -491,7 +491,14 @@
           if (kind === 'mount' && ABIL[id]) UI.bindTip(c, () => `<div class="tt-name">${U.esc(d.name)}</div><div class="tt-line">+${Math.round((d.spd - 1) * 100)}% move speed</div><div class="tt-ench" style="color:#ffd040">Space: ${U.esc(ABIL[id].name)}</div><div class="tt-desc">${U.esc(ABIL[id].desc)} (${ABIL[id].cd}s cooldown)</div><div class="tt-line dim">${U.esc(d.from)}</div>`);
           if (has) {
             if (active === id) el('div', 'stb-tag', kind === 'mount' ? '✓ Riding this one' : '✓ Following you', c);
-            else UI.button(c, kind === 'mount' ? 'Choose' : 'Take along', () => { if (kind === 'mount') { const was = p.riding; if (was) CP.dismount(p, true); p.mount = id; if (was) CP.mountUp(p); } else p.pet = id; R.Audio.play('equip'); UI.refresh(); }, 'small');
+            else UI.button(c, kind === 'mount' ? 'Choose' : 'Take along', () => {
+              if (kind === 'mount') {
+                const was = p.riding;
+                if (was && CP.dismount(p, true) === false) { UI.toast('Land on open ground first, then switch mounts.', 'bad'); return; }
+                p.mount = id; if (was) CP.mountUp(p);
+              } else p.pet = id;
+              R.Audio.play('equip'); UI.refresh();
+            }, 'small');
             if (kind === 'pet' && active === id) UI.button(c, 'Send home', () => { p.pet = null; UI.refresh(); }, 'small');
           } else if (shop && d.price) {
             const ok = p.level >= (d.level || 1);

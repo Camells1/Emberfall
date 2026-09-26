@@ -230,3 +230,19 @@
     UI.toggle('crafting');
   });
 })(window.RPG);
+
+// The mouse wheel always scrolls the menu section under the cursor (every menu, every screen size).
+(function () {
+  document.addEventListener('wheel', (e) => {
+    const modal = e.target && e.target.closest && e.target.closest('#modal');
+    if (!modal) return;
+    for (let el = e.target; el && el !== modal.parentElement; el = el.parentElement) {
+      const cs = getComputedStyle(el);
+      if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1) {
+        const before = el.scrollTop;
+        el.scrollTop += e.deltaY * (e.deltaMode === 1 ? 32 : 1);
+        if (el.scrollTop !== before) { e.preventDefault(); return; }
+      }
+    }
+  }, { passive: false });
+})();

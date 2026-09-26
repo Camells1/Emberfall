@@ -1,7 +1,7 @@
 {
   "name": "emberfall",
   "productName": "Emberfall",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Emberfall: Legends of the Shattered Crown \u2014 a 2D action RPG with online co-op",
   "main": "main.js",
   "private": true,

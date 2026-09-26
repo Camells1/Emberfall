@@ -54,6 +54,7 @@
       }
       if (!best) continue;
       if (slot === 'offhand' && p.weapon() && R.WeaponTypes[p.weapon().type] && R.WeaponTypes[p.weapon().type].twoHanded) continue;
+      if (p.equip[slot] && p.equip[slot] !== best.id) p.inv.push(p.ench[slot] ? { id: p.equip[slot], qty: 1, ench: p.ench[slot] } : { id: p.equip[slot], qty: 1 }); // old gear goes to the bag
       p.equip[slot] = best.id;
       const en = R.Crafting && R.Crafting.enchantsFor(best).includes(BEST_ENCH[slot]) ? BEST_ENCH[slot] : R.Crafting && R.Crafting.enchantsFor(best)[0];
       if (en) p.ench[slot] = { id: en, lv: 3 };

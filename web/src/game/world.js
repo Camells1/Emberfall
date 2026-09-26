@@ -202,7 +202,7 @@
       return c;
     };
     return {
-      width: M.w * S, height: M.h * S,
+      width: M.w * S, height: M.h * S, CH, chunk: (cx, cy) => get(cx, cy, true),
       // draw the ground covering world rect (x, y, w, h)
       draw(ctx, x, y, w, h) {
         const PX = CH * S;
@@ -779,6 +779,7 @@
   // ==========================================================================
   let lightCanvas = null;
   W.draw = function (ctx) {
+    if (R.HD2D && R.HD2D.on() && R.HD2D.draw(ctx)) { drawWeather(ctx); if (R.Guide) R.Guide.draw(ctx, Math.round(W.cam.x), Math.round(W.cam.y)); drawScreenFX(ctx); return; }
     const M = W.map, cam = W.cam;
     const [sx, sy] = FX.shakeOffset();
     const cx = Math.round(cam.x + sx), cy = Math.round(cam.y + sy);
@@ -854,6 +855,13 @@
     if (W.fade > 0) { ctx.fillStyle = U.rgba('#000000', W.fade); ctx.fillRect(0, 0, G.W, G.H); }
   };
 
+  // flash + low-health vignette + fade (shared by both renderers)
+  function drawScreenFX(ctx) {
+    const pl = W.player;
+    if (FX.flashT > 0) { ctx.fillStyle = U.rgba(FX.flashC, 0.35 * FX.flashT / FX.flashMax); ctx.fillRect(0, 0, G.W, G.H); }
+    if (pl && !pl.dead && pl.hp / pl.stats.maxHp < 0.3) { const a = (0.3 - pl.hp / pl.stats.maxHp) * 1.6 * (0.7 + 0.3 * Math.sin(W.time * 6)); const g = ctx.createRadialGradient(G.W / 2, G.H / 2, G.H * 0.35, G.W / 2, G.H / 2, G.W * 0.65); g.addColorStop(0, 'rgba(160,0,0,0)'); g.addColorStop(1, U.rgba('#a00000', Math.min(0.6, a))); ctx.fillStyle = g; ctx.fillRect(0, 0, G.W, G.H); }
+    if (W.fade > 0) { ctx.fillStyle = U.rgba('#000000', W.fade); ctx.fillRect(0, 0, G.W, G.H); }
+  }
   function drawProp(ctx, p, pl) {
     const d = PR[p.id];
     const frame = d.anim ? Math.floor(W.time * 6 + p.x) % d.anim : 0;

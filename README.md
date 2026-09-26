@@ -31,6 +31,7 @@ Up to 4 players. You can set an optional password when hosting. (There's also a 
 
 ## Features
 
+- **HD-2D graphics**: a 3D world with lighting and depth, with the pixel art standing up in it. Press F9 for the classic 2D look.
 - **Huge open world**: every outdoor region is about ten times bigger, with roads, outposts (waypoints + crafting), forts, champions, ruins, lakes, wishing wells, standing stones and hidden chests. The further from town, the tougher the monsters.
 - **Online co-op for up to 4** with room codes and optional passwords. Everyone can go anywhere, drop items for each other or send items and gold with "Give to".
 - **PvP arena** (the Crimson Colosseum, just west of Havenbrook), plus a solo **Gauntlet** of five monster waves
@@ -64,6 +65,11 @@ Up to 4 players. You can set an optional password when hosting. (There's also a 
 Gamepads work too.
 
 ## Changelog
+
+### v1.5
+- **HD-2D graphics** (on by default, F9 to switch): a 3D diorama world with a tilted camera, real lighting, 3D walls, hedges and cliffs, soft shadows and upright pixel-art characters
+- Every menu stays on screen and scrolls with the mouse wheel on any window size
+- Fixes: HD-2D memory use, huge bosses clipping, switching mounts while flying, and the admin unlock now keeps your old gear
 
 ### v1.4.2
 - Every menu scrolls when it is taller than the window (pause menu, stable, admin panel and the rest)
@@ -138,5 +144,7 @@ Plain JavaScript with no build step. `web/index.html` loads the scripts in order
 `DESIGN.md` has the content plan: zones, enemies, bosses and gear rules. Saves are kept in the browser's (or app's) local storage: three slots plus an autosave.
 
 ## Credits
+
+- 3D rendering: [three.js](https://threejs.org) (MIT license, see web/lib/three.LICENSE.txt)
 
 Online play uses [PeerJS](https://peerjs.com) (MIT licence, bundled in `web/lib/`) and its free public matchmaking server.

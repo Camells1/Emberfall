@@ -6,7 +6,7 @@
   const SETTINGS = 'emberfall.settings';
   const Save = R.Save = {};
 
-  R.settings = Object.assign({ fancy: true, shake: true, autosave: true, guide: true, master: 0.7, sfx: 0.8, music: 0.45, showFps: false, muteUnfocused: true, chatter: true, fullscreen: false, difficulty: 'normal' }, load(SETTINGS) || {});
+  R.settings = Object.assign({ fancy: true, shake: true, autosave: true, guide: true, master: 0.7, sfx: 0.8, music: 0.45, showFps: false, muteUnfocused: true, chatter: true, fullscreen: false, difficulty: 'normal', hd2d: true }, load(SETTINGS) || {});
   function load(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { console.error(e); return false; } }
   Save.saveSettings = () => store(SETTINGS, R.settings);

@@ -25,7 +25,7 @@
       UI.button(menu, 'Settings', () => UI.open('settings', { back: 'title' }));
       UI.button(menu, 'Controls', () => UI.open('controls', { back: 'title' }));
       if (isElectron()) UI.button(menu, 'Quit', () => window.electronAPI.quit());
-      el('div', 'title-foot', 'v1.4.2 · Built with love and procedurally drawn pixels · Arrow keys / gamepad work in menus', box);
+      el('div', 'title-foot', 'v1.5 · Built with love and procedurally drawn pixels · Arrow keys / gamepad work in menus', box);
     },
     back() {},
   };
@@ -726,6 +726,7 @@
         if (c) sw.style.background = c; sw.title = c ? c : "The design's own colours";
         sw.onclick = () => { st.crosshairColor = c; R.Save.saveSettings(); XH.apply(); UI.refresh(); };
       }
+      toggle('HD-2D graphics (3D world, F9)', 'hd2d');
       slider('Master Volume', 'master', (v) => R.Audio.setVolume('master', v));
       slider('Music', 'music', (v) => R.Audio.setVolume('music', v));
       slider('Sound Effects', 'sfx', (v) => R.Audio.setVolume('sfx', v));
