@@ -73,6 +73,14 @@ Gamepads work too.
 
 ## Changelog
 
+### v1.7: everything in 3D
+- **Every monster and boss is a 3D creature** (slimes, wolves, goblins, skeletons, spiders, golems, treants, the void eye and all the rest), with walking, wind-up, attack, casting and death animations, hit flashes and an elite glow
+- **All buildings and objects are 3D**: houses with roofs, doors and lit windows, towers, the lighthouse, stalls, wells, fountains, lamps, torches, campfires, furniture, carts, boats, graves, statues, ruins and more, plus flowers, reeds, coral and other small plants
+- **Loot is 3D**: spinning gold coins, real weapons, potion bottles and gems on the ground with rarity glows and beams, chests with opening lids, and 3D herb, log and ore nodes
+- **New character models**: better proportions, faces with eyes, brows and noses, fuller hair, bending knees and elbows, real 3D weapons and ink outlines
+- Smooth, sharp damage, XP and gold numbers
+- **Much less lag**: shots and spells no longer stutter, new areas load without freezing, and busy towns render about twice as fast
+
 ### v1.6: Shattercrown
 - **New name and logo**: Emberfall is now **Shattercrown** (there were already games called Emberfall on Steam). Saves carry over.
 - **3D characters**: you, your friends and every villager are smooth 3D figures built from your look and gear (hair, ears, horns, beards, armour, helmets, capes, shields, weapons), with walking, running, attacking, casting and dodging animations

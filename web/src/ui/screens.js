@@ -25,7 +25,7 @@
       UI.button(menu, 'Settings', () => UI.open('settings', { back: 'title' }));
       UI.button(menu, 'Controls', () => UI.open('controls', { back: 'title' }));
       if (isElectron()) UI.button(menu, 'Quit', () => window.electronAPI.quit());
-      el('div', 'title-foot', 'v1.6 · Built with love, procedurally drawn pixels and a little 3D · Arrow keys / gamepad work in menus', box);
+      el('div', 'title-foot', 'v1.7 · Built with love, procedurally drawn pixels and a lot of 3D · Arrow keys / gamepad work in menus', box);
     },
     back() {},
   };

@@ -320,7 +320,7 @@
       const r = B.buildPet(e.pid, k); if (!r) return false;
       rig.root.rotation.x = -CH.TILT; rig.root.scale.setScalar(CH.SCALE * 1.05);
       rig.yawG = k.grp(rig.root, 0, 0, 0); rig.yawG.add(r.g);
-      for (const m of rig.mats) m.userData.base = m.color.clone();
+      CH.bake(rig, 'pet|' + e.pid);
       rec = { id: e.pid, rig, r, yaw: null, px: e.x, py: e.y, t: now, shadow: util.shadowMesh() };
       scene.add(rig.root); pets.set(e, rec);
     }
@@ -338,7 +338,7 @@
   B.removePet = function (e, scene) {
     const rec = pets.get(e); if (!rec) return;
     scene.remove(rec.rig.root); scene.remove(rec.shadow); rec.shadow.material.dispose();
-    for (const m of rec.rig.mats) m.dispose();
+    R.HD2DChars.dispose(rec.rig);
     pets.delete(e);
   };
   B.sweep = function (seen, scene) { for (const e of [...pets.keys()]) if (!seen.has(e) || e.remove) B.removePet(e, scene); };

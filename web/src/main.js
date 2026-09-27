@@ -133,6 +133,7 @@
     if (UI.current && UI.screens[UI.current].update) UI.screens[UI.current].update(dt);
     if (R.HD2D && R.HD2D.present) R.HD2D.present(ctx, canvas.width, canvas.height);
     ctx.drawImage(back, 0, 0, canvas.width, canvas.height);
+    if (R.HD2D && R.HD2D.post) R.HD2D.post(ctx, canvas.width, canvas.height);
     Input.endFrame();
     fpsT += dt; fpsN++;
     if (fpsT > 0.5) { if (R.settings.showFps) document.getElementById('fps').textContent = Math.round(fpsN / fpsT) + ' fps'; fpsT = 0; fpsN = 0; }
@@ -140,7 +141,7 @@
 
   R.tickNow = (dt) => { try { tick(dt); } catch (e) { console.error(e); } };
   // Draw one frame right now (used by tests/tools when the window is in the background).
-  R.renderNow = function () { if (R.state === 'play') { UI.updateHUD(0); W.draw(bctx); } if (R.HD2D && R.HD2D.present) R.HD2D.present(ctx, canvas.width, canvas.height); ctx.drawImage(back, 0, 0, canvas.width, canvas.height); };
+  R.renderNow = function () { if (R.state === 'play') { UI.updateHUD(0); W.draw(bctx); } if (R.HD2D && R.HD2D.present) R.HD2D.present(ctx, canvas.width, canvas.height); ctx.drawImage(back, 0, 0, canvas.width, canvas.height); if (R.HD2D && R.HD2D.post) R.HD2D.post(ctx, canvas.width, canvas.height); };
 
   // Slowly panning forest as the title backdrop.
   let tbg = null;

@@ -18,7 +18,7 @@
     if (w) return w;
     const c = document.createElement('canvas'); c.width = c.height = 16;
     const td = R.Tiles[id]; try { td.draw(G.painter(c.getContext('2d')), U.rng('wall:' + id), 0, 0); } catch (e) { const g = c.getContext('2d'); g.fillStyle = td.color || '#555'; g.fillRect(0, 0, 16, 16); }
-    w = new T.InstancedMesh(wallGeo, new T.MeshLambertMaterial({ map: tex(scale2x(c, document.createElement('canvas')), false, true) }), 4000);
+    w = new T.InstancedMesh(wallGeo, new T.MeshLambertMaterial({ map: gpuScale2x(c) }), 4000);
     w.count = 0; w.frustumCulled = false; w.castShadow = w.receiveShadow = true; scene.add(w); wallSets.set(id, w);
     return w;
   }
@@ -62,6 +62,42 @@
     dctx.putImageData(img, 0, 0);
     return dst;
   }
+  // The same Scale2x, run on the GPU: draws the texture into a 2x render target through a small
+  // shader, so smoothing a new patch of ground never has to read pixels back (which stalls a frame).
+  let s2Scene = null, s2Cam = null, s2Mat = null;
+  function gpuScale2x(canvas) {
+    if (!s2Scene) {
+      s2Mat = new T.ShaderMaterial({
+        uniforms: { tex: { value: null }, size: { value: new T.Vector2(1, 1) } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: [
+          'uniform sampler2D tex; uniform vec2 size; varying vec2 vUv;',
+          'bool eq(vec4 a, vec4 b) { return all(lessThan(abs(a - b), vec4(0.004))); }',
+          'void main() {',
+          '  vec2 px = vUv * size, ip = floor(px), f = px - ip, d = 1.0 / size, c = (ip + 0.5) * d;',
+          '  vec4 P = texture2D(tex, c), A = texture2D(tex, c + vec2(0.0, d.y)), D = texture2D(tex, c - vec2(0.0, d.y));',
+          '  vec4 C = texture2D(tex, c - vec2(d.x, 0.0)), B = texture2D(tex, c + vec2(d.x, 0.0));',
+          '  vec4 o = P;',
+          '  if (!eq(A, D) && !eq(C, B)) {',
+          '    if (f.y >= 0.5) { if (f.x < 0.5) { if (eq(C, A)) o = A; } else { if (eq(A, B)) o = B; } }',
+          '    else { if (f.x < 0.5) { if (eq(C, D)) o = C; } else { if (eq(D, B)) o = D; } }',
+          '  }',
+          '  gl_FragColor = o;',
+          '}'].join('\n'),
+        depthTest: false, depthWrite: false,
+      });
+      s2Scene = new T.Scene(); s2Scene.add(new T.Mesh(new T.PlaneGeometry(2, 2), s2Mat)); s2Cam = new T.Camera();
+    }
+    const src = new T.CanvasTexture(canvas); src.magFilter = src.minFilter = T.NearestFilter; src.generateMipmaps = false;
+    const rt = new T.WebGLRenderTarget(canvas.width * 2, canvas.height * 2, { magFilter: T.LinearFilter, minFilter: T.LinearFilter, depthBuffer: false });
+    rt.texture.generateMipmaps = false;
+    s2Mat.uniforms.tex.value = src; s2Mat.uniforms.size.value.set(canvas.width, canvas.height);
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(rt); renderer.render(s2Scene, s2Cam); renderer.setRenderTarget(prev);
+    src.dispose();
+    rt.texture.userData.rt = rt;
+    return rt.texture;
+  }
   const smoothCache = new WeakMap(); // static sprite -> its smoothed copy
   function smooth(c) { let s2 = smoothCache.get(c); if (!s2) { s2 = scale2x(c, document.createElement('canvas')); smoothCache.set(c, s2); } return s2; }
   function tex(canvas, dynamic, lin) {
@@ -71,7 +107,7 @@
     return t;
   }
   // free a texture's GPU memory (it is rebuilt from its canvas if that canvas is shown again)
-  function freeTex(t) { if (!t) return; t.dispose(); if (t.image) texCache.delete(t.image); }
+  function freeTex(t) { if (!t) return; if (t.userData && t.userData.rt) { t.userData.rt.dispose(); return; } t.dispose(); if (t.image) texCache.delete(t.image); }
   const spriteMat = (map) => new T.MeshLambertMaterial({ map, transparent: false, alphaTest: 0.45, side: T.DoubleSide });
   // Upright cut-out, tilted back to face the camera so pixel art keeps its proportions.
   function billboard(w, h) { const m = new T.Mesh(geoPlane, spriteMat(null)); m.scale.set(w, h, 1); m.rotation.x = -(Math.PI / 2 - PITCH) * 0.85; scene.add(m); return m; }
@@ -85,6 +121,24 @@
     if (!shadowTex) { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 4, 32, 32, 30); gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); shadowTex = new T.CanvasTexture(c); }
     const m = new T.Mesh(geoPlane, new T.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; scene.add(m); return m;
+  }
+  // Compile every kind of material once, up front, so the first arrow, spell, drop or monster of a
+  // kind doesn't freeze the game for a moment while the GPU builds its shader.
+  let warmed = false;
+  function warmUp(x, z) {
+    warmed = true;
+    const g = new T.BoxGeometry(1, 1, 1), list = [];
+    const vc = new T.BufferGeometry().copy(g); vc.setAttribute('color', new T.BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3));
+    const mats = [
+      [vc, new T.MeshPhongMaterial({ vertexColors: true, shininess: 10 })], [vc, new T.MeshBasicMaterial({ vertexColors: true })],
+      [g, new T.MeshBasicMaterial({ color: 0, side: T.BackSide })], [g, new T.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 })],
+      [g, new T.MeshPhongMaterial({ color: 0xffffff })], [g, new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false })],
+      [g, spriteMat(tex(document.createElement('canvas'), false, true))], [g, new T.MeshLambertMaterial({ color: 0xffffff })],
+    ];
+    for (const [geo, m] of mats) { const mesh = new T.Mesh(geo, m); mesh.position.set(x, -40, z); mesh.castShadow = true; mesh.frustumCulled = false; scene.add(mesh); list.push(mesh); }
+    // the instanced pools
+    for (const k of ['box|l', 'box|g', 'box|f', 'blade|n']) { const [geo, mt] = k.split('|'); if (R.HD2DModels) pool(geo, mt); }
+    return list;
   }
   // upload only the used part of an instanced buffer (a full upload is several MB a frame)
   function flush(pl, n) {
@@ -126,7 +180,7 @@
     for (const m of groundMeshes.values()) { scene.remove(m); freeTex(m.material.map); m.material.dispose(); }
     for (const m of propMeshes.values()) scene.remove(m);
     for (const e of entMeshes.values()) { scene.remove(e.mesh); scene.remove(e.shadow); freeTex(e.mesh.material.map); e.mesh.material.dispose(); }
-    groundMeshes.clear(); propMeshes.clear(); entMeshes.clear(); tufts.clear(); if (R.HD2DChars) R.HD2DChars.clear(scene); if (R.HD2DBeasts) R.HD2DBeasts.clear(scene);
+    groundMeshes.clear(); propMeshes.clear(); entMeshes.clear(); tufts.clear(); if (R.HD2DChars) R.HD2DChars.clear(scene); if (R.HD2DBeasts) R.HD2DBeasts.clear(scene); if (R.HD2DMonsters) R.HD2DMonsters.clear(scene); if (R.HD2DThings) R.HD2DThings.clear(scene);
     curMap = R.World.map; camX = null;
   }
 
@@ -139,7 +193,7 @@
     if (camX == null || Math.abs(camX - pl0.x) > 400 || Math.abs(camZ - pl0.y) > 400) { camX = pl0.x; camZ = pl0.y; }
     camX += (pl0.x - camX) * 0.12; camZ += (pl0.y - camZ) * 0.12;
     const tx = camX, tz = camZ - 6;
-    const dist = VIEW_H / (2 * Math.tan(FOV / 2 * Math.PI / 180));
+    const dist = VIEW_H / (H.zoom || 1) / (2 * Math.tan(FOV / 2 * Math.PI / 180));
     camera.position.set(tx, Math.sin(PITCH) * dist, tz + Math.cos(PITCH) * dist);
     camera.lookAt(tx, 0, tz);
     camera.updateMatrixWorld();
@@ -163,19 +217,27 @@
     // view window in world space (a trapezoid; take a generous box)
     const x0 = tx - 420, x1 = tx + 420, y0 = tz - 330, y1 = tz + 250;
     // ground chunks
-    const PX = M.ground.CH * S, seenG = new Set();
+    // New ground patches are made at most one per frame (nearest first) so moving never stalls; the
+    // view box reaches well past the screen edges, so a patch is ready before it comes into sight.
+    const PX = M.ground.CH * S, seenG = new Set(), want = [];
+    let budget = groundMeshes.size ? 1 : 99;
     for (let cy = Math.max(0, Math.floor(y0 / PX)); cy <= Math.min(Math.ceil(M.h / M.ground.CH) - 1, Math.floor(y1 / PX)); cy++)
       for (let cx = Math.max(0, Math.floor(x0 / PX)); cx <= Math.min(Math.ceil(M.w / M.ground.CH) - 1, Math.floor(x1 / PX)); cx++) {
         const k = cx + ',' + cy; seenG.add(k);
-        let m = groundMeshes.get(k);
-        if (!m) {
+        if (!groundMeshes.has(k)) want.push([Math.hypot((cx + 0.5) * PX - tx, (cy + 0.5) * PX - tz), cx, cy, k]);
+      }
+    want.sort((a, b) => a[0] - b[0]);
+    for (const [, cx, cy, k] of want) {
+        if (budget-- <= 0) break;
+        let m;
+        {
           const c = M.ground.chunk(cx, cy);
-          m = new T.Mesh(geoPlane, new T.MeshLambertMaterial({ map: tex(scale2x(c, document.createElement('canvas')), false, true) })); m.receiveShadow = true;
+          m = new T.Mesh(geoPlane, new T.MeshLambertMaterial({ map: gpuScale2x(c) })); m.receiveShadow = true;
           m.rotation.x = -Math.PI / 2; m.scale.set(c.width, c.height, 1);
           m.position.set(cx * PX + c.width / 2, 0, cy * PX + c.height / 2);
           scene.add(m); groundMeshes.set(k, m);
         }
-      }
+    }
     for (const [k, m] of groundMeshes) if (!seenG.has(k)) { scene.remove(m); freeTex(m.material.map); m.material.dispose(); groundMeshes.delete(k); }
     // walls stand up as blocks, wrapped in their own tile art
     { const Tl = R.Tiles, mat = new T.Matrix4(); const used = new Map();
@@ -229,10 +291,17 @@
     for (const [pr, m] of propMeshes) if (!seenP.has(pr)) { scene.remove(m); m.material.dispose(); propMeshes.delete(pr); }
     for (const pl of pools.values()) flush(pl, used3.get(pl) || 0);
     // entities: each one draws itself (with all its usual detail) into its own little canvas
-    const seenE = new Set(), CH3 = R.HD2DChars, BE = R.HD2DBeasts, util = { tex, smooth, shadowMesh }, now = performance.now();
+    const seenE = new Set(), flying = [], CH3 = R.HD2DChars, BE = R.HD2DBeasts, MO = R.HD2DMonsters, TH = R.HD2DThings, util = { tex, smooth, shadowMesh }, now = performance.now();
     for (const e of W.entities) {
       if (e.x < x0 || e.x > x1 || e.y < y0 || e.y > y1 + 40 || e.remove) continue;
+      if (R.Projectile && e instanceof R.Projectile) { flying.push(e); continue; } // drawn with the effects layer (no texture per shot)
       seenE.add(e);
+      if ((MO && MO.has(e)) || (TH && TH.wants(e))) { // monsters, bosses, loot, chests and gathering nodes
+        const old = entMeshes.get(e);
+        if (old) { scene.remove(old.mesh); scene.remove(old.shadow); freeTex(old.mesh.material.map); old.mesh.material.dispose(); old.shadow.material.dispose(); entMeshes.delete(e); }
+        if (MO && MO.has(e)) MO.draw(e, scene, util, now); else TH.draw(e, scene, util, now);
+        continue;
+      }
       if (CH3 && (CH3.wants(e) || (e.isPet && BE))) { // people, mounts and pets are real 3D figures
         const old = entMeshes.get(e);
         if (old) { scene.remove(old.mesh); scene.remove(old.shadow); freeTex(old.mesh.material.map); old.mesh.material.dispose(); old.shadow.material.dispose(); entMeshes.delete(e); }
@@ -271,15 +340,22 @@
     for (const [e, rec] of entMeshes) if (!seenE.has(e)) { scene.remove(rec.mesh); scene.remove(rec.shadow); freeTex(rec.mesh.material.map); rec.mesh.material.dispose(); rec.shadow.material.dispose(); entMeshes.delete(e); }
     if (CH3) CH3.sweep(seenE, scene);
     if (BE) BE.sweep(seenE, scene);
+    if (MO) MO.sweep(seenE, scene);
+    if (TH) TH.sweep(seenE, scene);
+    const warm = warmed ? null : warmUp(tx, tz);
     renderer.render(scene, camera);
+    if (warm) { for (const m of warm) { scene.remove(m); m.material.dispose(); } }
     // the 3D picture is shown at full screen resolution by H.present(); the 640x360 layer only carries effects & labels
     bctx.clearRect(0, 0, G.W, G.H); frameReady = true;
     // --- overlay: effects, health bars, damage numbers, prompts (projected onto the ground plane)
     const a = H.affine(tx, tz);
     bctx.save(); bctx.setTransform(a[0], a[1], a[2], a[3], a[4], a[5]);
-    R.FX.drawEffects(bctx, 'ground'); R.FX.drawParticles(bctx); R.FX.drawEffects(bctx, 'top');
-    for (const e of W.entities) if (seenE.has(e)) { if (CH3) CH3.overlay(bctx, e); if (e.drawUI) e.drawUI(bctx); }
-    R.FX.drawTexts(bctx);
+    R.FX.drawEffects(bctx, 'ground'); R.FX.drawParticles(bctx);
+    for (const pj of flying) { try { pj.draw(bctx); } catch (err) { /* keep going */ } }
+    R.FX.drawEffects(bctx, 'top');
+    for (const e of W.entities) if (seenE.has(e)) { if (CH3) CH3.overlay(bctx, e); if (MO) MO.overlay(bctx, e); if (e.drawUI) e.drawUI(bctx); }
+    if (!TH) R.FX.drawTexts(bctx); // otherwise drawn smooth at full resolution by H.post()
+    H.lastAffine = a;
     const it = !p.dead && !R.UI.blocking() ? W.interactTarget() : null;
     W.currentInteract = it;
     if (it && it.label) {
@@ -304,6 +380,8 @@
     if (renderer) renderer.setSize(outW, outH, false);
   };
   H.info = () => renderer && { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, props: propMeshes.size, ents: entMeshes.size, objs: scene.children.length };
+  // after the pixel layer: smooth floating text on top
+  H.post = function (ctx, w, h) { if (!H.lastAffine || !R.HD2DThings || !H.on() || R.state !== 'play') return; R.HD2DThings.drawTexts(ctx, H.lastAffine, w / G.W); };
   H.present = function (ctx, w, h) {
     if (!frameReady) return false;
     frameReady = false;
