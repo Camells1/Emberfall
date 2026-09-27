@@ -275,7 +275,7 @@
         { speaker: 'Narrator', text: 'With the Broodmother slain, the second Ember Shard glows in your hand.' },
         { speaker: 'Narrator', text: 'Somewhere far to the north, in the Obsidian Citadel, Malgrath stirs. He has felt his shards returning.' },
         { speaker: 'Narrator', text: 'But that is a story for another day. Havenbrook is safe — thanks to you.' },
-        { speaker: 'Narrator', text: 'Thank you for playing Emberfall! You can keep exploring, finish side quests and hunt for legendary loot.' },
+        { speaker: 'Narrator', text: 'Thank you for playing Shattercrown! You can keep exploring, finish side quests and hunt for legendary loot.' },
       ], () => R.UI.banner('THE END', 'of Chapter One'));
     },
   };

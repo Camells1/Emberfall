@@ -137,8 +137,8 @@
       { speaker: 'Narrator', text: 'Malgrath the Hollow King crumbles to ash, and the black flames around the Citadel gutter out.' },
       { speaker: 'Narrator', text: 'Far away, in Havenbrook, the Ember Crown blazes — and every hearth in the realm flares warm again.' },
       { speaker: 'Narrator', text: 'Songs will be sung of you for a hundred years. Fennick is already working on a few. They rhyme badly.' },
-      { speaker: 'Narrator', text: 'Thank you for playing Emberfall! Keep exploring, finish every side quest and hunt for mythic loot.' },
-    ], () => R.UI.banner('THE END', 'Emberfall: Legends of the Shattered Crown'));
+      { speaker: 'Narrator', text: 'Thank you for playing Shattercrown! Keep exploring, finish every side quest and hunt for mythic loot.' },
+    ], () => R.UI.banner('THE END', 'Shattercrown: Legends of the Shattered Crown'));
   };
   R.events.on('boss:defeat', (ev) => {
     const shard = { pharaoh: 'ember_shard_3', frost_wyrm: 'ember_shard_4', infernal: 'ember_shard_5' }[ev.id];

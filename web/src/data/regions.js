@@ -574,7 +574,7 @@
     R.UI.dialog([
       { speaker: 'Narrator', text: 'The Watcher Beyond closes its great eye, and the Rift folds shut like a closing book.' },
       { speaker: 'Narrator', text: 'Somewhere in Havenbrook, Fennick finally finds a word that rhymes with "Ulthuun". It is not a good word.' },
-      { speaker: 'Narrator', text: 'Thank you for playing every last corner of Emberfall! The bounty board always has more work for a legend.' },
+      { speaker: 'Narrator', text: 'Thank you for playing every last corner of the realm! The bounty board always has more work for a legend.' },
     ], () => R.UI.banner('TRUE ENDING', 'The Watcher Beyond is defeated'));
   };
 })(window.RPG);

@@ -915,13 +915,14 @@
 
   function drawLighting(ctx, cx, cy) {
     const def = W.def;
-    const dark = def.dark || 0;
+    const DN = R.DayNight, dark = DN ? DN.dark(def) : def.dark || 0, gold = DN ? DN.golden() : 0;
+    if (gold > 0.02) { ctx.fillStyle = U.rgba('#ff9040', 0.13 * gold); ctx.fillRect(0, 0, G.W, G.H); }
     if (dark <= 0) { if (def.tint) { ctx.fillStyle = def.tint; ctx.fillRect(0, 0, G.W, G.H); } return; }
     if (!lightCanvas) lightCanvas = G.canvas(G.W, G.H);
     const lc = lightCanvas.getContext('2d');
     lc.globalCompositeOperation = 'source-over';
     lc.clearRect(0, 0, G.W, G.H);
-    lc.fillStyle = U.rgba(def.ambient || '#05040a', dark);
+    lc.fillStyle = U.rgba(DN ? DN.ambient(def) : def.ambient || '#05040a', dark);
     lc.fillRect(0, 0, G.W, G.H);
     lc.globalCompositeOperation = 'destination-out';
     const hole = (x, y, r, a) => {

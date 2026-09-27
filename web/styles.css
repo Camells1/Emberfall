@@ -1,4 +1,4 @@
-/* Emberfall UI. The #ui layer is 1280x720 "UI pixels", scaled to match the game canvas. */
+/* Shattercrown UI. The #ui layer is 1280x720 "UI pixels", scaled to match the game canvas. */
 :root {
   --gold: #e8c060;
   --gold-d: #9a7430;
@@ -183,7 +183,7 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
 /* ---------- title ---------- */
 .title-screen { display: flex; flex-direction: column; align-items: center; gap: 40px; }
 .logo { text-align: center; animation: pop .8s ease-out; }
-.logo-top { font: bold 110px var(--serif); letter-spacing: 12px; color: #ffcf6a; background: linear-gradient(#fff4c0, #ffb040 55%, #b0501a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 0 #2a1004) drop-shadow(0 0 30px rgba(255, 120, 30, .5)); }
+.logo-top { font: bold 96px var(--serif); letter-spacing: 8px; color: #ffcf6a; background: linear-gradient(#fff4c0, #ffb040 55%, #b0501a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 0 #2a1004) drop-shadow(0 0 30px rgba(255, 120, 30, .5)); }
 .logo-sub { font: italic 26px var(--serif); color: #e8d8b8; letter-spacing: 3px; text-shadow: 0 2px 0 #000; margin-top: -6px; }
 .title-menu { display: flex; flex-direction: column; gap: 10px; width: 380px; }
 .title-foot { position: absolute; bottom: 14px; color: var(--dim); font-size: 12px; }
@@ -522,3 +522,32 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
 #modal ::-webkit-scrollbar-track { background: rgba(0,0,0,.35); border-radius: 6px; }
 #modal ::-webkit-scrollbar-thumb { background: var(--gold-d); border-radius: 6px; border: 2px solid rgba(0,0,0,.35); }
 #modal ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* day/night clock under the minimap */
+.mm-clock { position: absolute; top: 6px; left: 6px; padding: 1px 7px; border-radius: 9px; background: rgba(10,6,18,.72); font: bold 12px var(--font); color: #f0e6d2; letter-spacing: 1px; pointer-events: none; }
+
+/* achievements */
+.ach-frame { width: 940px; }
+.ach-bar { height: 12px; background: rgba(0,0,0,.45); border: 1px solid var(--gold-d); border-radius: 6px; overflow: hidden; margin: 4px 0 12px; }
+.ach-fill { height: 100%; background: linear-gradient(90deg, #b07010, #ffd860); }
+.ach-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 470px; overflow-y: auto; padding-right: 6px; }
+.ach-card { display: flex; gap: 10px; align-items: center; background: var(--panel2); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 10px; opacity: .55; filter: grayscale(.9); }
+.ach-card.got { opacity: 1; filter: none; border-color: var(--gold-d); box-shadow: inset 0 0 18px rgba(232,192,96,.12); }
+.ach-card .ach-ic { font-size: 30px; width: 42px; text-align: center; }
+.ach-n { font-weight: bold; color: var(--gold); }
+.ach-d { font-size: 13px; color: var(--dim); }
+.ach-date { font-size: 11px; color: var(--good); margin-top: 2px; }
+.ach-stats { margin-top: 12px; font-size: 13px; color: var(--dim); text-align: center; }
+.ach-stats b { color: var(--text); }
+.ach-pop { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 12px 22px 12px 16px; z-index: 40;
+  background: linear-gradient(180deg, rgba(60,40,20,.96), rgba(28,18,10,.96)); border: 2px solid var(--gold); border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 24px rgba(232,192,96,.35);
+  animation: achIn .45s cubic-bezier(.2,1.4,.4,1); transition: opacity .45s, transform .45s; pointer-events: none; }
+.ach-pop.out { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+.ach-pop .ach-ic { font-size: 34px; }
+.ach-pop .ach-k { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
+.ach-pop .ach-n { font-size: 20px; }
+@keyframes achIn { from { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(.8); } }
+
+/* title emblem */
+.logo-emblem { display: block; width: 104px; height: 104px; margin: 0 auto -10px; filter: drop-shadow(0 6px 18px rgba(0,0,0,.7)) drop-shadow(0 0 22px rgba(255,140,40,.35)); animation: emblemFloat 4s ease-in-out infinite; }
+@keyframes emblemFloat { 50% { transform: translateY(-5px); } }

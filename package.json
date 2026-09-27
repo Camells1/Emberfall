@@ -1,8 +1,8 @@
 {
   "name": "emberfall",
-  "productName": "Emberfall",
-  "version": "1.5.0",
-  "description": "Emberfall: Legends of the Shattered Crown \u2014 a 2D action RPG with online co-op",
+  "productName": "Shattercrown",
+  "version": "1.6.0",
+  "description": "Shattercrown: Legends of the Shattered Crown — a 2D action RPG with online co-op",
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -18,7 +18,7 @@
   },
   "build": {
     "appId": "io.github.dddde6294.emberfall",
-    "productName": "Emberfall",
+    "productName": "Shattercrown",
     "files": [
       "main.js",
       "netmain.js",
@@ -29,7 +29,8 @@
       "output": "dist"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     },
     "mac": {
       "target": "dmg",
@@ -45,10 +46,14 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Emberfall",
+      "shortcutName": "Shattercrown",
       "runAfterFinish": true,
-      "artifactName": "Emberfall-Setup-${version}.${ext}"
-    }
+      "artifactName": "Shattercrown-Setup-${version}.${ext}",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "icon": "build/icon.png"
   },
   "allowScripts": {
     "electron@38.8.6": true,

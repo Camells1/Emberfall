@@ -3,6 +3,8 @@
 // co-op networking (plain TCP, newline-delimited JSON) on behalf of the page.
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
+// The game was called Emberfall before; keep using that data folder so everyone's saves carry over.
+app.setPath('userData', path.join(app.getPath('appData'), 'Emberfall'));
 
 let win = null;
 
@@ -13,7 +15,8 @@ function createWindow() {
     minWidth: 640,
     minHeight: 360,
     backgroundColor: '#000000',
-    title: 'Emberfall',
+    title: 'Shattercrown',
+    icon: path.join(__dirname, 'web', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

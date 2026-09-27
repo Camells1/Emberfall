@@ -1,14 +1,18 @@
-# Emberfall: Legends of the Shattered Crown
+<p align="center"><img src="build/icon.png" width="128" alt="Shattercrown"></p>
 
-A 2D pixel-art action RPG you can play **solo or online with up to 3 friends**. Pick from 5 classes and 9 races, customise your hero, explore 18 regions, fight 11 bosses that come back harder every time you beat them, and hunt for secrets.
+# Shattercrown: Legends of the Shattered Crown
 
-![Emberfall gameplay](docs/gameplay.png)
+*(formerly Emberfall)*
+
+An HD-2D action RPG you can play **solo or online with up to 3 friends**. Pick from 5 classes and 9 races, customise your hero, explore 18 regions, fight 11 bosses that come back harder every time you beat them, and hunt for secrets.
+
+![Shattercrown gameplay](docs/gameplay.png)
 
 ## ⬇️ Download (Windows)
 
 ### [**Download the latest version here**](https://github.com/Camells1/Emberfall/releases/latest)
 
-On that page, click **`Emberfall-Setup-….exe`** under *Assets*, run it, and you're done. The installer includes everything, online play too. It adds Emberfall to your Desktop and Start menu.
+On that page, click **`Shattercrown-Setup-….exe`** under *Assets*, run it, and you're done. The installer includes everything, online play too. It adds Shattercrown to your Desktop and Start menu. Already have Emberfall? Just install over it: your saves carry over.
 
 > **"Windows protected your PC"?** The installer isn't code-signed (that costs money), so Windows SmartScreen may warn you the first time. Click **More info → Run anyway**.
 
@@ -31,14 +35,16 @@ Up to 4 players. You can set an optional password when hosting. (There's also a 
 
 ## Features
 
-- **HD-2D graphics**: a 3D world with lighting and depth, with the pixel art standing up in it. Press F9 for the classic 2D look.
+- **HD-2D graphics**: a 3D world with real shadows, low-poly trees, rocks and swaying grass, smooth 3D characters, mounts and pets, lit by lamps and torches. Press F9 for the classic 2D look.
+- **Day and night**: the sun crosses the sky (and the shadows turn with it), evenings glow gold, and nights are blue with lamplight and fireflies
+- **35 achievements** (press O)
 - **Huge open world**: every outdoor region is about ten times bigger, with roads, outposts (waypoints + crafting), forts, champions, ruins, lakes, wishing wells, standing stones and hidden chests. The further from town, the tougher the monsters.
 - **Online co-op for up to 4** with room codes and optional passwords. Everyone can go anywhere, drop items for each other or send items and gold with "Give to".
 - **PvP arena** (the Crimson Colosseum, just west of Havenbrook), plus a solo **Gauntlet** of five monster waves
 - **5 classes** and **17 Bloodborn races** (Human, Elf, Dwarf, Orc, Beastkin, Dragonborn, Demonkin, Revenant, Sylvan, Gnome, Merfolk, Celestial, Forged, Nightborn, Fae, Minotaur, Lizardfolk)
 - **Learnable skills**: 30 extra skills from trainers and quests. Put any 4 on your skill bar.
 - **Crafting**: gather herbs, ore and timber, brew potions, forge gear, **enchant** it (16 enchantments) and salvage what you don't need
-- **11 mounts** with their own special abilities and **16 pets** that follow you and fetch loot
+- **12 mounts** with their own special abilities and **16 pets** that follow you and fetch loot
 - **11 bosses**, each with its own attacks, animations and movement, plus phases, shields, enrage timers and endless **Challenge Sigil** rematches
 - **Custom crosshairs**, deep character customisation, difficulty levels from Story to Hell, 60+ quests and hundreds of items
 - Everything (art, sound and music) is generated in code. There are no asset files.
@@ -59,12 +65,23 @@ Up to 4 players. You can set an optional password when hosting. (There's also a 
 | Crafting recipes | B |
 | Ride / dismount · mount ability | H · Space (while riding) |
 | Stable (mounts & pets) | N |
+| Achievements | O |
 | Admin panel (level 30) | F10 |
 | Menu | Esc |
 
 Gamepads work too.
 
 ## Changelog
+
+### v1.6: Shattercrown
+- **New name and logo**: Emberfall is now **Shattercrown** (there were already games called Emberfall on Steam). Saves carry over.
+- **3D characters**: you, your friends and every villager are smooth 3D figures built from your look and gear (hair, ears, horns, beards, armour, helmets, capes, shields, weapons), with walking, running, attacking, casting and dodging animations
+- **3D mounts and pets**: all 12 mounts and 16 pets are new 3D animals with gallops, wing flaps, tail wags and hops. Riders sit in the saddle, and flying mounts really fly
+- **3D nature**: trees, pines, palms, bushes, rocks, crystals, mushrooms, cacti, logs, barrels, crates, pillars and fences are real 3D models that sway in the wind, with 3D grass tufts on the ground
+- **Real sun shadows** and full-resolution rendering (no more blurry stretched picture)
+- **Day and night cycle** with golden sunrises and sunsets, moonlit nights, glowing lamps and fireflies (Settings to turn it off)
+- **35 achievements** with pop-ups and their own screen (O or Esc → Achievements)
+- Faster HD-2D rendering
 
 ### v1.5
 - **HD-2D graphics** (on by default, F9 to switch): a 3D diorama world with a tilted camera, real lighting, 3D walls, hedges and cliffs, soft shadows and upright pixel-art characters

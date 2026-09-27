@@ -516,7 +516,7 @@
   function hostHandle(from, m) {
     const peer = N.peers.get(from);
     if (m.t === 'hello') {
-      if (m.v !== PROTO) { N.toPeer(from, { t: 'reject', reason: 'Different game version. Everyone needs the same Emberfall version.' }); setTimeout(() => api() && api().kick(from), 300); return; }
+      if (m.v !== PROTO) { N.toPeer(from, { t: 'reject', reason: 'Different game version. Everyone needs the same Shattercrown version.' }); setTimeout(() => api() && api().kick(from), 300); return; }
       if (N.password && m.pw !== N.password) { N.toPeer(from, { t: 'reject', pw: 1, reason: m.pw ? 'Wrong password.' : 'This game has a password. Type it in and try again.' }); setTimeout(() => api() && api().kick(from), 300); return; }
       const np = { id: from, look: m.look, s: m.s, at: performance.now(), ent: null };
       N.peers.set(from, np);
@@ -804,7 +804,7 @@
             const c = el('div', 'mp-code', U.esc(N.code), body);
             c.title = 'Click to copy';
             c.onclick = () => { try { navigator.clipboard.writeText(N.code); UI.toast('Room code copied!', 'good'); } catch (e) { /* ignore */ } };
-            el('div', 'hint', 'They open Emberfall, click Multiplayer on the title screen (or press Esc → Multiplayer in game), type the code and click Join.', body);
+            el('div', 'hint', 'They open Shattercrown, click Multiplayer on the title screen (or press Esc → Multiplayer in game), type the code and click Join.', body);
           } else {
             el('div', 'mp-status', `<b>You are hosting</b> on port ${N.port}. Friends join with one of these addresses:`, body);
             const list = el('div', 'mp-addrs', null, body);
@@ -881,7 +881,7 @@
           if (!r.ok) UI.toast('Could not connect: ' + r.error, 'bad');
           UI.refresh();
         });
-        el('div', 'mp-help', 'Only needed if room codes don\'t work for you. The first time you host this way, Windows may ask to allow Emberfall through the firewall — click <b>Allow</b>. The password boxes above work here too.', adv);
+        el('div', 'mp-help', 'Only needed if room codes don\'t work for you. The first time you host this way, Windows may ask to allow Shattercrown through the firewall — click <b>Allow</b>. The password boxes above work here too.', adv);
       }
       const foot = el('div', 'cc-foot', null, body);
       UI.button(foot, '← Back', () => UI.back());

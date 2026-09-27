@@ -1,5 +1,5 @@
 'use strict';
-// Co-op networking for Emberfall (Electron main process).
+// Co-op networking for Shattercrown (Electron main process).
 // One player hosts (TCP server); friends connect to host:port. The page talks to this
 // through preload.js (window.electronAPI.net); every message is one line of JSON.
 const net = require('net');

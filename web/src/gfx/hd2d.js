@@ -10,6 +10,7 @@
   let T = null, renderer, scene, camera, amb, hemi, sun, glCanvas, playerLight;
   const PITCH = 52 * Math.PI / 180, FOV = 30, VIEW_H = 330; // camera tilt, lens, how much ground is visible
   const texCache = new WeakMap(), groundMeshes = new Map(), propMeshes = new Map(), entMeshes = new Map(), lights = [];
+  let tmpC = null, tmpC2 = null;
   let geoPlane = null, curMap = null, wallGeo = null, camX = null, camZ = null;
   const wallSets = new Map(); // tile id -> instanced blocks textured with that tile's own art
   function wallSet(id) {
@@ -17,33 +18,55 @@
     if (w) return w;
     const c = document.createElement('canvas'); c.width = c.height = 16;
     const td = R.Tiles[id]; try { td.draw(G.painter(c.getContext('2d')), U.rng('wall:' + id), 0, 0); } catch (e) { const g = c.getContext('2d'); g.fillStyle = td.color || '#555'; g.fillRect(0, 0, 16, 16); }
-    w = new T.InstancedMesh(wallGeo, new T.MeshLambertMaterial({ map: tex(c) }), 4000);
-    w.count = 0; w.frustumCulled = false; scene.add(w); wallSets.set(id, w);
+    w = new T.InstancedMesh(wallGeo, new T.MeshLambertMaterial({ map: tex(scale2x(c, document.createElement('canvas')), false, true) }), 4000);
+    w.count = 0; w.frustumCulled = false; w.castShadow = w.receiveShadow = true; scene.add(w); wallSets.set(id, w);
     return w;
   }
-  const WALL_H = 22, CHAR_K = 1.35; // wall height; characters drawn a bit bigger than props
+  const WALL_H = 22, CHAR_K = 1.45; // wall height; characters drawn a bit bigger than props
 
   function init() {
     if (renderer) return true;
     T = window.THREE; if (!T) return false;
     glCanvas = document.createElement('canvas');
     try { renderer = new T.WebGLRenderer({ canvas: glCanvas, antialias: false, alpha: false, preserveDrawingBuffer: true }); } catch (e) { console.warn('HD-2D unavailable', e); return false; }
-    renderer.setSize(G.W * 2, G.H * 2, false);
+    renderer.setSize(outW || G.W * 2, outH || G.H * 2, false);
     renderer.setPixelRatio(1);
     scene = new T.Scene();
     camera = new T.PerspectiveCamera(FOV, G.W / G.H, 10, 4000);
     amb = new T.AmbientLight(0xffffff, 0.55); scene.add(amb);
     hemi = new T.HemisphereLight(0xfff4e0, 0x404060, 0.35); scene.add(hemi);
-    sun = new T.DirectionalLight(0xfff0d0, 0.55); sun.position.set(-0.4, 1, 0.6); scene.add(sun);
+    sun = new T.DirectionalLight(0xfff0d0, 0.55); scene.add(sun); scene.add(sun.target);
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.5;
+    Object.assign(sun.shadow.camera, { left: -540, right: 540, top: 480, bottom: -480, near: 10, far: 1800 }); sun.shadow.camera.updateProjectionMatrix();
     playerLight = new T.PointLight(0xffe0b0, 0, 180, 1.6); scene.add(playerLight);
     for (let i = 0; i < 10; i++) { const l = new T.PointLight(0xffc080, 0, 160, 1.8); scene.add(l); lights.push(l); }
-    geoPlane = new T.PlaneGeometry(1, 1);
+    geoPlane = new T.PlaneGeometry(1, 1); tmpC = new T.Color(); tmpC2 = new T.Color();
     wallGeo = new T.BoxGeometry(16, WALL_H, 16);
     return true;
   }
-  function tex(canvas, dynamic) {
+  // Scale2x: doubles pixel art while rounding off stair-step edges
+  function scale2x(src, dst) {
+    const w = src.width, h = src.height, W2 = w * 2;
+    if (dst.width !== W2 || dst.height !== h * 2) { dst.width = W2; dst.height = h * 2; dst._img = null; }
+    const sd = new Uint32Array(src.getContext('2d').getImageData(0, 0, w, h).data.buffer);
+    const dctx = dst.getContext('2d'); const img = dst._img || (dst._img = dctx.createImageData(W2, h * 2)); const od = new Uint32Array(img.data.buffer);
+    for (let y = 0; y < h; y++) {
+      const ro = y * w, ru = (y ? y - 1 : 0) * w, rd = (y < h - 1 ? y + 1 : y) * w;
+      for (let x = 0; x < w; x++) {
+        const P = sd[ro + x], A = sd[ru + x], D = sd[rd + x], C = sd[ro + (x ? x - 1 : 0)], B = sd[ro + (x < w - 1 ? x + 1 : x)], o = y * 2 * W2 + x * 2;
+        if (A !== D && C !== B) { od[o] = C === A ? A : P; od[o + 1] = A === B ? B : P; od[o + W2] = C === D ? C : P; od[o + W2 + 1] = D === B ? D : P; }
+        else od[o] = od[o + 1] = od[o + W2] = od[o + W2 + 1] = P;
+      }
+    }
+    dctx.putImageData(img, 0, 0);
+    return dst;
+  }
+  const smoothCache = new WeakMap(); // static sprite -> its smoothed copy
+  function smooth(c) { let s2 = smoothCache.get(c); if (!s2) { s2 = scale2x(c, document.createElement('canvas')); smoothCache.set(c, s2); } return s2; }
+  function tex(canvas, dynamic, lin) {
     let t = texCache.get(canvas);
-    if (!t) { t = new T.CanvasTexture(canvas); t.magFilter = T.NearestFilter; t.minFilter = T.NearestFilter; t.generateMipmaps = false; texCache.set(canvas, t); }
+    if (!t) { t = new T.CanvasTexture(canvas); t.magFilter = t.minFilter = lin ? T.LinearFilter : T.NearestFilter; t.generateMipmaps = false; texCache.set(canvas, t); }
     else if (dynamic) t.needsUpdate = true;
     return t;
   }
@@ -63,12 +86,47 @@
     const m = new T.Mesh(geoPlane, new T.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
     m.rotation.x = -Math.PI / 2; scene.add(m); return m;
   }
+  // upload only the used part of an instanced buffer (a full upload is several MB a frame)
+  function flush(pl, n) {
+    const had = pl.count; pl.count = n;
+    if (!n && !had) return;
+    pl.instanceMatrix.updateRange.offset = 0; pl.instanceMatrix.updateRange.count = Math.max(n, 1) * 16; pl.instanceMatrix.needsUpdate = true;
+    if (pl.instanceColor) { pl.instanceColor.updateRange.offset = 0; pl.instanceColor.updateRange.count = Math.max(n, 1) * 3; pl.instanceColor.needsUpdate = true; }
+  }
+  // instanced pools for the 3D props: one per (shape, material)
+  const pools = new Map(), tufts = new Map();
+  let tmpM, tmpE, tmpQ, tmpV, tmpS;
+  const GRASS = { grass: 1, darkgrass: 1, feygrass: 1, sporegrass: 1, swamp: 1 };
+  function pool(geo, mat) {
+    const k = geo + '|' + mat; let pl = pools.get(k);
+    if (pl) return pl;
+    if (!tmpM) { tmpM = new T.Matrix4(); tmpE = new T.Euler(); tmpQ = new T.Quaternion(); tmpV = new T.Vector3(); tmpS = new T.Vector3(); }
+    const m = mat === 'g' ? new T.MeshBasicMaterial() : mat === 'f' ? new T.MeshLambertMaterial({ transparent: true, opacity: 0.35, depthWrite: false }) : new T.MeshLambertMaterial();
+    const g = geo === 'blade' ? (bladeGeo || (bladeGeo = new T.ConeGeometry(0.5, 1, 3).translate(0, 0.5, 0).toNonIndexed())) : R.HD2DModels.geo(geo);
+    if (geo === 'blade') g.computeVertexNormals();
+    pl = new T.InstancedMesh(g, m, geo === 'blade' ? 9000 : 6000); pl.count = 0; pl.frustumCulled = false;
+    pl.castShadow = mat === 'l' || mat === 'g'; pl.receiveShadow = mat !== 'g' && mat !== 'f';
+    pl.setColorAt(0, new T.Color());
+    scene.add(pl); pools.set(k, pl);
+    return pl;
+  }
+  let bladeGeo = null;
+  function makeTuft(x, y, id) {
+    const r = U.rng((x * 73856093) ^ (y * 19349663));
+    if (r() > 0.45) return null;
+    const base = new T.Color(R.Tiles[id].color), out = [];
+    for (let k = 0, n = 3 + Math.floor(r() * 4); k < n; k++) {
+      const col = base.clone().multiplyScalar(0.85 + r() * 0.45);
+      out.push({ m: new T.Matrix4().setPosition(x * S + 2 + r() * 12, 0, y * S + 2 + r() * 12), rx: (r() - 0.5) * 0.6, ry: r() * 6, w: 1.6 + r(), h: 4 + r() * 5, col });
+    }
+    return out;
+  }
   // ------------------------------------------------------------------ per-map setup
   function resetMap() {
     for (const m of groundMeshes.values()) { scene.remove(m); freeTex(m.material.map); m.material.dispose(); }
     for (const m of propMeshes.values()) scene.remove(m);
     for (const e of entMeshes.values()) { scene.remove(e.mesh); scene.remove(e.shadow); freeTex(e.mesh.material.map); e.mesh.material.dispose(); }
-    groundMeshes.clear(); propMeshes.clear(); entMeshes.clear();
+    groundMeshes.clear(); propMeshes.clear(); entMeshes.clear(); tufts.clear(); if (R.HD2DChars) R.HD2DChars.clear(scene); if (R.HD2DBeasts) R.HD2DBeasts.clear(scene);
     curMap = R.World.map; camX = null;
   }
 
@@ -86,15 +144,22 @@
     camera.lookAt(tx, 0, tz);
     camera.updateMatrixWorld();
     // light & mood
-    const dark = W.def.dark || 0;
-    amb.intensity = 0.62 * (1 - dark * 0.8); hemi.intensity = 0.4 * (1 - dark * 0.7); sun.intensity = W.def.outdoor ? 0.55 * (1 - dark) : 0.1;
+    const DN = R.DayNight, dark = DN ? DN.dark(W.def) : W.def.dark || 0, night = DN ? DN.night() : 0, gold = DN ? DN.golden() : 0;
+    amb.intensity = 0.62 * (1 - dark * 0.8) * (1 - night * 0.45); hemi.intensity = 0.4 * (1 - dark * 0.7) * (1 - night * 0.6);
+    // sun (or moon) colour and strength through the day
+    sun.intensity = W.def.outdoor ? 0.55 * (1 - (W.def.dark || 0)) * (1 - night * 0.72) + gold * 0.12 : 0.1;
+    sun.color.set(0xfff0d0).lerp(tmpC.set(0xff9a50), Math.min(1, gold)).lerp(tmpC.set(0x8898d8), night);
+    amb.color.set(0xffffff).lerp(tmpC.set(0x8a94ff), night * 0.8).lerp(tmpC.set(0xffc090), gold * 0.35);
     if (!scene.background) { scene.background = new T.Color(); scene.fog = new T.Fog(0, 1, 2); }
-    scene.background.set(W.def.ambient || (W.def.outdoor ? '#101820' : '#06040a')); scene.fog.color.copy(scene.background); scene.fog.near = dist * 1.05; scene.fog.far = dist * 1.9;
+    scene.background.set(night > 0.05 && !W.def.dark ? tmpC.set(W.def.ambient || '#101820').lerp(tmpC2.set('#040716'), night) : (W.def.ambient || (W.def.outdoor ? '#101820' : '#06040a'))); scene.fog.color.copy(scene.background); scene.fog.near = dist * 1.05; scene.fog.far = dist * 1.9;
     const p = W.player;
+    const sd = DN && DN.outdoor() ? DN.sunDir() : { x: -0.45, y: 0.85, z: 0.25 };
+    sun.castShadow = !!W.def.outdoor; sun.position.set(tx + sd.x * 700, sd.y * 700, tz + sd.z * 700 - 40); sun.target.position.set(tx, 0, tz - 40);
     playerLight.position.set(p.x, 26, p.y + 4); playerLight.intensity = dark ? 1.4 : 0.35; playerLight.distance = (W.def.playerLight || 110) * 1.6;
     // nearest map lights
-    const near = M.lights.filter((l) => Math.abs(l.x - tx) < 420 && Math.abs(l.y - tz) < 320).sort((a, b) => U.dist(a.x, a.y, tx, tz) - U.dist(b.x, b.y, tx, tz));
-    lights.forEach((L, i) => { const l = near[i]; if (!l) { L.intensity = 0; return; } L.color.set(l.color); L.position.set(l.x, 22, l.y); L.distance = l.r * 2.2; L.intensity = (dark ? 1.6 : 0.8) * (1 + (l.flicker ? Math.sin(W.time * 13 + i) * l.flicker : 0)); });
+    if (!M._propLights) { M._propLights = []; for (const pr of M.props) { const d = R.Props[pr.id]; if (d && d.light) M._propLights.push({ x: pr.x, y: pr.y - d.ay * 0.6, r: d.light.r, color: d.light.color, flicker: d.light.flicker }); } }
+    const near = M.lights.concat(M._propLights).filter((l) => Math.abs(l.x - tx) < 420 && Math.abs(l.y - tz) < 320).sort((a, b) => U.dist(a.x, a.y, tx, tz) - U.dist(b.x, b.y, tx, tz));
+    lights.forEach((L, i) => { const l = near[i]; if (!l) { L.intensity = 0; return; } L.color.set(l.color); L.position.set(l.x, 22, l.y); L.distance = l.r * 2.2; L.intensity = (dark ? 1.6 + night * 0.8 : 0.8) * (1 + (l.flicker ? Math.sin(W.time * 13 + i) * l.flicker : 0)); });
     // view window in world space (a trapezoid; take a generous box)
     const x0 = tx - 420, x1 = tx + 420, y0 = tz - 330, y1 = tz + 250;
     // ground chunks
@@ -105,7 +170,7 @@
         let m = groundMeshes.get(k);
         if (!m) {
           const c = M.ground.chunk(cx, cy);
-          m = new T.Mesh(geoPlane, new T.MeshLambertMaterial({ map: tex(c) }));
+          m = new T.Mesh(geoPlane, new T.MeshLambertMaterial({ map: tex(scale2x(c, document.createElement('canvas')), false, true) })); m.receiveShadow = true;
           m.rotation.x = -Math.PI / 2; m.scale.set(c.width, c.height, 1);
           m.position.set(cx * PX + c.width / 2, 0, cy * PX + c.height / 2);
           scene.add(m); groundMeshes.set(k, m);
@@ -123,25 +188,56 @@
         const hh = M.sight[i] ? 1 : 0.7;
         mat.makeScale(1, hh, 1); mat.setPosition(tx2 * S + 8, WALL_H * hh / 2, ty * S + 8); w.setMatrixAt(n, mat); used.set(w, n + 1);
       }
-      for (const w of wallSets.values()) { w.count = used.get(w) || 0; w.instanceMatrix.needsUpdate = true; } }
+      for (const w of wallSets.values()) flush(w, used.get(w) || 0); }
+    // grass tufts: little 3D blades on grassy ground near the camera
+    const used3 = new Map(), MD = R.HD2DModels;
+    if (MD) {
+      const gp = pool('blade', 'n'), gx0 = Math.max(0, Math.floor((tx - 380) / S)), gx1 = Math.min(M.w - 1, Math.ceil((tx + 380) / S)), gy0 = Math.max(0, Math.floor((tz - 260) / S)), gy1 = Math.min(M.h - 1, Math.ceil((tz + 230) / S));
+      let n = 0; const sw = W.time * 2.2;
+      for (let ty = gy0; ty <= gy1; ty++) for (let tx2 = gx0; tx2 <= gx1; tx2++) {
+        const i = ty * M.w + tx2; if (!GRASS[M.tiles[i]] || M.block[i]) continue;
+        let tf = tufts.get(i);
+        if (tf === undefined) { tf = makeTuft(tx2, ty, M.tiles[i]); tufts.set(i, tf); }
+        if (!tf) continue;
+        const s1 = Math.sin(sw + tx2 * 0.6 + ty * 0.4) * 0.12;
+        for (const b of tf) { if (n >= 9000) break; tmpM.copy(b.m); tmpE.set(b.rx + s1, b.ry, 0, 'YXZ'); tmpQ.setFromEuler(tmpE); tmpM.compose(tmpV.setFromMatrixPosition(b.m), tmpQ, tmpS.set(b.w, b.h, b.w)); gp.setMatrixAt(n, tmpM); gp.setColorAt(n, b.col); n++; }
+      }
+      used3.set(gp, n);
+    }
     // props
     const seenP = new Set(), PR = R.Props;
     for (const pr of M.props) {
-      if (pr.x < x0 || pr.x > x1 || pr.y < y0 || pr.y > y1 + 40) continue;
+      if (pr.x < x0 || pr.x > x1 || pr.y < y0 - 60 || pr.y > y1 + 40) continue;
+      if (MD && MD.has(pr.id)) { // a real low-poly model instead of a cut-out
+        const d = PR[pr.id], hide = d.h > 24 && p.y < pr.y - 2 && p.y > pr.y - d.h * 1.3 && Math.abs(p.x - pr.x) < d.w * 0.6;
+        const sw = Math.sin(W.time * 1.6 + pr.x * 0.05 + pr.y * 0.03) * 0.9;
+        for (const pt of MD.parts(pr)) {
+          const pl = pool(pt.geo, hide ? 'f' : pt.mat), n = used3.get(pl) || 0; if (n >= 6000) continue;
+          if (pt.sway) { tmpM.copy(pt.m); tmpM.elements[12] += sw * pt.sway; tmpM.elements[14] += sw * pt.sway * 0.4; pl.setMatrixAt(n, tmpM); } else pl.setMatrixAt(n, pt.m);
+          pl.setColorAt(n, pt.col); used3.set(pl, n + 1);
+        }
+        continue;
+      }
       seenP.add(pr);
       const d = PR[pr.id], spr = PR.sprite(pr.id, pr.v, d.anim ? Math.floor(W.time * 6 + pr.x) % d.anim : 0);
       let m = propMeshes.get(pr);
-      if (!m) { m = billboard(spr.width, spr.height); propMeshes.set(pr, m); }
-      const t = tex(spr); if (m.material.map !== t) { m.material.map = t; m.material.needsUpdate = true; }
+      if (!m) { m = billboard(spr.width, spr.height); m.castShadow = spr.height > 24; propMeshes.set(pr, m); }
+      const t = tex(smooth(spr), false, true); if (m.material.map !== t) { m.material.map = t; m.material.needsUpdate = true; }
       m.scale.set(spr.width, spr.height, 1);
       placeBillboard(m, pr.x, pr.y, d.ax + 1, d.ay + 1, spr.width, spr.height);
     }
     for (const [pr, m] of propMeshes) if (!seenP.has(pr)) { scene.remove(m); m.material.dispose(); propMeshes.delete(pr); }
+    for (const pl of pools.values()) flush(pl, used3.get(pl) || 0);
     // entities: each one draws itself (with all its usual detail) into its own little canvas
-    const seenE = new Set();
+    const seenE = new Set(), CH3 = R.HD2DChars, BE = R.HD2DBeasts, util = { tex, smooth, shadowMesh }, now = performance.now();
     for (const e of W.entities) {
       if (e.x < x0 || e.x > x1 || e.y < y0 || e.y > y1 + 40 || e.remove) continue;
       seenE.add(e);
+      if (CH3 && (CH3.wants(e) || (e.isPet && BE))) { // people, mounts and pets are real 3D figures
+        const old = entMeshes.get(e);
+        if (old) { scene.remove(old.mesh); scene.remove(old.shadow); freeTex(old.mesh.material.map); old.mesh.material.dispose(); old.shadow.material.dispose(); entMeshes.delete(e); }
+        if (e.isPet) { if (BE.drawPet(e, scene, util, now)) continue; } else { CH3.draw(e, scene, util, now); continue; }
+      }
       const sc = (e.def && e.def.scale) || 1, huge = e.boss && sc > 2.4, big = e.boss || sc > 1.6 || e.riding;
       const cw = huge ? 384 : big ? 256 : 128, chh = huge ? 336 : big ? 224 : 112, footY = chh - 20;
       let rec = entMeshes.get(e);
@@ -149,13 +245,22 @@
         if (rec) scene.remove(rec.mesh);
         const c = document.createElement('canvas'); c.width = cw; c.height = chh;
         rec = { c, ctx: c.getContext('2d'), mesh: billboard(cw, chh), cw, shadow: shadowMesh() };
-        rec.ctx.imageSmoothingEnabled = false; rec.mesh.material.map = tex(c); rec.mesh.material.needsUpdate = true;
+        rec.ctx.imageSmoothingEnabled = false; rec.mesh.material.map = tex(c, false, true); rec.mesh.material.needsUpdate = true; rec.mesh.castShadow = true;
         entMeshes.set(e, rec);
       }
+      // repaint at most ~20 times a second (pixel animations run slower than that); a hit flash repaints at once
+      const fl = e.flash > 0;
+      if (now >= (rec.next || 0) || fl !== rec.fl) { rec.next = now + 40 + Math.random() * 20; rec.fl = fl;
       const g = rec.ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, chh);
       g.setTransform(1, 0, 0, 1, Math.round(cw / 2 - e.x), Math.round(footY - e.y));
       try { e.draw(g); } catch (err) { /* keep going */ }
-      tex(rec.c, true);
+      { // soft light from the upper left, shadowed underside: gives the flat art some roundness
+        const hg = 24 * Math.min(sc, 3) * (e.riding ? 1.5 : 1), cx = cw / 2 - hg * 0.35, cy = footY - hg * 1.05;
+        const gr = g.createRadialGradient(cx, cy, 0, cx + hg * 0.35, cy + hg * 0.55, hg * 1.25);
+        gr.addColorStop(0, 'rgba(255,246,220,0.30)'); gr.addColorStop(0.45, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(12,10,40,0.42)');
+        g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = gr; g.fillRect(0, 0, cw, chh); g.globalCompositeOperation = 'source-over';
+      }
+      tex(rec.c, true); }
       const k = e.boss ? 1.1 : CHAR_K;
       rec.mesh.scale.set(cw * k, chh * k, 1);
       placeBillboard(rec.mesh, e.x, e.y, cw / 2 * k, footY * k, cw * k, chh * k);
@@ -164,13 +269,16 @@
       rec.shadow.scale.set(sr * 2, sr * 1.2, 1); rec.shadow.position.set(e.x, 0.4, e.y + 1); rec.shadow.visible = !e.dead && e.alpha !== 0;
     }
     for (const [e, rec] of entMeshes) if (!seenE.has(e)) { scene.remove(rec.mesh); scene.remove(rec.shadow); freeTex(rec.mesh.material.map); rec.mesh.material.dispose(); rec.shadow.material.dispose(); entMeshes.delete(e); }
+    if (CH3) CH3.sweep(seenE, scene);
+    if (BE) BE.sweep(seenE, scene);
     renderer.render(scene, camera);
-    bctx.save(); bctx.imageSmoothingEnabled = true; bctx.drawImage(glCanvas, 0, 0, G.W, G.H); bctx.restore();
+    // the 3D picture is shown at full screen resolution by H.present(); the 640x360 layer only carries effects & labels
+    bctx.clearRect(0, 0, G.W, G.H); frameReady = true;
     // --- overlay: effects, health bars, damage numbers, prompts (projected onto the ground plane)
     const a = H.affine(tx, tz);
     bctx.save(); bctx.setTransform(a[0], a[1], a[2], a[3], a[4], a[5]);
     R.FX.drawEffects(bctx, 'ground'); R.FX.drawParticles(bctx); R.FX.drawEffects(bctx, 'top');
-    for (const e of W.entities) if (e.drawUI && seenE.has(e)) e.drawUI(bctx);
+    for (const e of W.entities) if (seenE.has(e)) { if (CH3) CH3.overlay(bctx, e); if (e.drawUI) e.drawUI(bctx); }
     R.FX.drawTexts(bctx);
     const it = !p.dead && !R.UI.blocking() ? W.interactTarget() : null;
     W.currentInteract = it;
@@ -188,6 +296,20 @@
     return true;
   };
 
+  // Screen-resolution output: main.js calls resize() with the display canvas size and present() each frame.
+  let frameReady = false, outW = 0, outH = 0;
+  H.resize = function (w, h) {
+    const k = Math.min(1, Math.sqrt((2560 * 1440) / (w * h))); // cap the pixel count on huge screens
+    outW = Math.round(w * k); outH = Math.round(h * k);
+    if (renderer) renderer.setSize(outW, outH, false);
+  };
+  H.info = () => renderer && { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, props: propMeshes.size, ents: entMeshes.size, objs: scene.children.length };
+  H.present = function (ctx, w, h) {
+    if (!frameReady) return false;
+    frameReady = false;
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(glCanvas, 0, 0, w, h); ctx.imageSmoothingEnabled = false;
+    return true;
+  };
   // World ground point -> screen pixel (640x360)
   const v3 = () => new T.Vector3();
   H.project = function (x, y, h) { const v = v3().set(x, h || 0, y).project(camera); return { x: (v.x + 1) / 2 * G.W, y: (1 - v.y) / 2 * G.H }; };

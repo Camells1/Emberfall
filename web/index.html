@@ -4,15 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com">
-  <title>Emberfall</title>
-  <meta name="description" content="Emberfall: Legends of the Shattered Crown — a 2D action RPG with five classes, nine races, 18 regions, quests, bosses and hundreds of items.">
+  <title>Shattercrown</title>
+  <meta name="description" content="Shattercrown: Legends of the Shattered Crown — an HD-2D action RPG with five classes, nine races, 18 regions, quests, bosses and hundreds of items.">
+  <link rel="icon" href="icon.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="wrap">
     <canvas id="game" width="640" height="360"></canvas>
     <div id="ui"></div>
-    <div id="loading">Loading Emberfall…</div>
+    <div id="loading">Loading Shattercrown…</div>
   </div>
 
   <!-- core -->
@@ -73,7 +74,11 @@
   <script src="src/game/nav.js"></script>
   <script src="src/game/ai.js"></script>
   <script src="src/game/world.js"></script>
+  <script src="src/game/daynight.js"></script>
   <script src="src/gfx/hd2d.js"></script>
+  <script src="src/gfx/hd2d_models.js"></script>
+  <script src="src/gfx/hd2d_chars.js"></script>
+  <script src="src/gfx/hd2d_beasts.js"></script>
   <script src="src/game/questlog.js"></script>
   <script src="src/game/guide.js"></script>
   <script src="src/game/save.js"></script>
@@ -85,6 +90,7 @@
   <script src="src/ui/crafting.js"></script>
   <script src="src/ui/skillbook.js"></script>
   <script src="src/ui/admin.js"></script>
+  <script src="src/ui/achievements.js"></script>
   <!-- UI-EXTRA -->
   <script src="lib/peerjs.min.js"></script>
   <script src="src/game/net.js"></script>

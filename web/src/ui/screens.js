@@ -15,7 +15,7 @@
     pause: false,
     build(m) {
       const box = el('div', 'title-screen', null, m);
-      el('div', 'logo', '<div class="logo-top">EMBERFALL</div><div class="logo-sub">Legends of the Shattered Crown</div>', box);
+      el('div', 'logo', '<img class="logo-emblem" src="icon.png" alt=""><div class="logo-top">SHATTERCROWN</div><div class="logo-sub">Legends of the Shattered Crown</div>', box);
       const menu = el('div', 'title-menu', null, box);
       const latest = R.Save.latest();
       if (latest) UI.button(menu, `Continue <small>${U.esc(latest.name)} · Lv ${latest.level} ${raceName(latest.race)} ${R.Classes[latest.cls] ? R.Classes[latest.cls].name : ''}</small>`, () => { UI.close(true); R.Save.load(latest.slot); }, 'big');
@@ -25,7 +25,7 @@
       UI.button(menu, 'Settings', () => UI.open('settings', { back: 'title' }));
       UI.button(menu, 'Controls', () => UI.open('controls', { back: 'title' }));
       if (isElectron()) UI.button(menu, 'Quit', () => window.electronAPI.quit());
-      el('div', 'title-foot', 'v1.5 · Built with love and procedurally drawn pixels · Arrow keys / gamepad work in menus', box);
+      el('div', 'title-foot', 'v1.6 · Built with love, procedurally drawn pixels and a little 3D · Arrow keys / gamepad work in menus', box);
     },
     back() {},
   };
@@ -727,6 +727,7 @@
         sw.onclick = () => { st.crosshairColor = c; R.Save.saveSettings(); XH.apply(); UI.refresh(); };
       }
       toggle('HD-2D graphics (3D world, F9)', 'hd2d');
+      toggle('Day & night cycle', 'dayNight');
       slider('Master Volume', 'master', (v) => R.Audio.setVolume('master', v));
       slider('Music', 'music', (v) => R.Audio.setVolume('music', v));
       slider('Sound Effects', 'sfx', (v) => R.Audio.setVolume('sfx', v));
@@ -747,7 +748,7 @@
       const body = UI.frame(m, 'Controls', 'controls-frame');
       const rows = [
         ['Move', 'W A S D / Arrow keys'], ['Aim', 'Mouse'], ['Attack', 'Left click (hold) / J'], ['Dodge roll (25 stamina)', 'Space'], ['Sprint (drains stamina)', 'Hold Shift'], ['Heavy attack (25 stamina)', 'Right click / U'], ['Skills', '1 2 3 4'],
-        ['Health / Mana potion', 'Q / R'], ['Interact / Talk', 'E / F'], ['Crafting recipes', 'B'], ['Mount up / dismount', 'H'], ['Mount ability (while riding)', 'Space'], ['Stable: mounts & pets', 'N'], ['Inventory', 'I / Tab'], ['Character', 'C'], ['Skills', 'K'], ['Quest log', 'L'], ['Map', 'M'], ['Pause / Back', 'Esc'],
+        ['Health / Mana potion', 'Q / R'], ['Interact / Talk', 'E / F'], ['Crafting recipes', 'B'], ['Mount up / dismount', 'H'], ['Mount ability (while riding)', 'Space'], ['Stable: mounts & pets', 'N'], ['Achievements', 'O'], ['Inventory', 'I / Tab'], ['Character', 'C'], ['Skills', 'K'], ['Quest log', 'L'], ['Map', 'M'], ['Pause / Back', 'Esc'],
         ['Menus', 'Arrow keys to move · Enter to select · Esc to go back'],
         ['Gamepad', 'Left stick move · Right stick aim · RT attack · LT heavy attack · A dodge · R3 sprint · LB/RB/B/L3 skills · Y interact · D-pad potions'],
         ['Gamepad menus', 'D-pad / stick to move · A select · B back · X drop/sell all'],
