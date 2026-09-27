@@ -474,6 +474,11 @@
       rig.shadow = util.shadowMesh(); scene.add(rig.root); rigs.set(e, rig);
     }
     const dt = Math.min(0.1, Math.max(0.001, (now - rig.t) / 1000)); rig.t = now;
+    // real movement, measured from how far it moved (the AI moves enemies directly, without a velocity)
+    if (rig.px == null) { rig.px = e.x; rig.py = e.y; rig.vx = 0; rig.vy = 0; }
+    const k = Math.min(1, dt * 12), jump = Math.hypot(e.x - rig.px, e.y - rig.py) > 60;
+    rig.vx += ((jump ? 0 : (e.x - rig.px) / dt) - rig.vx) * k; rig.vy += ((jump ? 0 : (e.y - rig.py) / dt) - rig.vy) * k;
+    rig.px = e.x; rig.py = e.y;
     pose(rig, e, dt);
     rig.root.position.set(e.x, (e.z || 0), e.y);
     const s = (e.def.shadow || e.r + 2) * 2.2 * (1 - Math.min(0.5, (e.z || 0) / 60));
@@ -483,11 +488,15 @@
 
   function pose(rig, e, dt) {
     const P = rig.parts, t = (e.animT || 0), an = e.anim || 'idle', W = R.World, pl = W.player;
-    const moving = Math.hypot(e.vx || 0, e.vy || 0) > 8 || an === 'walk';
-    // facing: where it's going, or at you while winding up / attacking / casting
+    const spd = Math.hypot(rig.vx, rig.vy), moving = spd > 6 || an === 'walk';
+    // facing, all the way round: at its target while winding up / attacking / casting, else where it's
+    // going, else at its target while it's fighting, else it keeps looking where it was
+    const tg = (e.target && !e.target.dead && e.target.x != null) ? e.target : pl;
+    const fighting = e.state && !['idle', 'wander', 'return'].includes(e.state) && tg && Math.hypot(tg.x - e.x, tg.y - e.y) < 260;
     let ang = null;
-    if ((an === 'windup' || an === 'attack' || an === 'cast') && pl) ang = Math.atan2(pl.y - e.y, pl.x - e.x);
-    else if (Math.hypot(e.vx || 0, e.vy || 0) > 8) ang = Math.atan2(e.vy, e.vx);
+    if ((an === 'windup' || an === 'attack' || an === 'cast' || e.state === 'windup' || e.state === 'strike' || e.state === 'charge' || e.state === 'cast') && tg) ang = Math.atan2(tg.y - e.y, tg.x - e.x);
+    else if (spd > 6) ang = Math.atan2(rig.vy, rig.vx);
+    else if (fighting) ang = Math.atan2(tg.y - e.y, tg.x - e.x);
     else if (rig.yaw == null) ang = e.face < 0 ? PI : 0;
     if (ang != null) { const want = Math.atan2(Math.cos(ang), Math.sin(ang)); if (rig.yaw == null) rig.yaw = want; rig.yaw += R.HD2DChars.angDiff(rig.yaw, want) * Math.min(1, dt * 10); }
     rig.yawG.rotation.y = rig.yaw || 0;
@@ -564,6 +573,7 @@
     rigs.delete(e);
   };
   MB.sweep = function (seen, scene) { for (const e of [...rigs.keys()]) if (!seen.has(e) || e.remove) MB.remove(e, scene); };
+  MB.yawOf = (e) => (rigs.get(e) ? rigs.get(e).yaw : null);
   MB.clear = function (scene) { for (const e of [...rigs.keys()]) MB.remove(e, scene); };
   // what the 2D drawer painted on top of the sprite: boss shields, blocking shimmer, mark
   MB.overlay = function (ctx, e) {
