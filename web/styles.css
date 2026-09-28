@@ -551,3 +551,14 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
 /* title emblem */
 .logo-emblem { display: block; width: 104px; height: 104px; margin: 0 auto -10px; filter: drop-shadow(0 6px 18px rgba(0,0,0,.7)) drop-shadow(0 0 22px rgba(255,140,40,.35)); animation: emblemFloat 4s ease-in-out infinite; }
 @keyframes emblemFloat { 50% { transform: translateY(-5px); } }
+
+/* Camel Studios account chip on the title screen */
+.acct-chip { position: absolute; top: 16px; right: 18px; display: flex; align-items: center; gap: 10px; }
+.acct-chip button { padding: 6px 14px; font-size: 14px; }
+.acct-who { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(12, 6, 24, .72); border: 1px solid rgba(240, 184, 56, .45); color: #f6e6c0; font-weight: bold; letter-spacing: .5px; }
+.acct-who i { width: 8px; height: 8px; border-radius: 50%; background: #3dff9a; box-shadow: 0 0 8px #3dff9a; }
+
+/* Modern wordmark to match the new flat crown logo */
+.logo-top { font: 800 clamp(44px, 9vh, 76px) "Segoe UI", "Trebuchet MS", system-ui, sans-serif !important; letter-spacing: 14px !important; background: linear-gradient(180deg, #ffe08a 0%, #f0a321 100%) !important; -webkit-background-clip: text !important; background-clip: text !important; filter: drop-shadow(0 6px 24px rgba(0, 0, 0, .55)) drop-shadow(0 0 30px rgba(240, 163, 33, .25)) !important; padding-left: 16px; }
+.logo-sub { font: 500 18px "Segoe UI", system-ui, sans-serif !important; font-style: normal !important; letter-spacing: 8px !important; text-transform: uppercase; color: #cdb8e8 !important; margin-top: 2px !important; }
+.logo-emblem { width: clamp(56px, 11vh, 88px) !important; height: clamp(56px, 11vh, 88px) !important; border-radius: 20px; margin-bottom: 4px !important; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .6)) !important; }

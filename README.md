@@ -2,7 +2,7 @@
 
 # Shattercrown: Legends of the Shattered Crown
 
-*(formerly Emberfall)*
+*(formerly Emberfall)* · A **Camel Studios** game · Website: **https://camells1.github.io/shattercrown/**
 
 An HD-2D action RPG you can play **solo or online with up to 3 friends**. Pick from 5 classes and 9 races, customise your hero, explore 18 regions, fight 11 bosses that come back harder every time you beat them, and hunt for secrets.
 
@@ -15,6 +15,10 @@ An HD-2D action RPG you can play **solo or online with up to 3 friends**. Pick f
 On that page, click **`Shattercrown-Setup-….exe`** under *Assets*, run it, and you're done. The installer includes everything, online play too. It adds Shattercrown to your Desktop and Start menu. Already have Emberfall? Just install over it: your saves carry over.
 
 > **"Windows protected your PC"?** The installer isn't code-signed (that costs money), so Windows SmartScreen may warn you the first time. Click **More info → Run anyway**.
+
+## 👤 Camel Studios account
+
+Click **Log in** at the top right of the title screen to sign in with your Camel Studios account (the same one Riftline uses). You can create one there with your email and a unique username#tag. Tick **Stay logged in** to stay signed in between sessions. Accounts are optional: the game plays exactly the same without one.
 
 ## 🎮 Play with friends
 

@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setFullscreen: (on) => ipcRenderer.send('fullscreen', !!on),
   // called with true/false whenever the window enters or leaves fullscreen (F11, OS controls...)
   onFullscreen: (fn) => ipcRenderer.on('fullscreen-changed', (_e, on) => fn(!!on)),
+  // Camel Studios account: open() shows the sign-in window and resolves with the session (or null)
+  account: {
+    open: () => ipcRenderer.invoke('account-open'),
+    logout: () => ipcRenderer.invoke('account-logout'),
+  },
   // co-op networking (see main.js). Messages are strings (one JSON object each).
   net: {
     host: (port) => ipcRenderer.invoke('net-host', port | 0),

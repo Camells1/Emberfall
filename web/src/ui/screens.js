@@ -25,7 +25,21 @@
       UI.button(menu, 'Settings', () => UI.open('settings', { back: 'title' }));
       UI.button(menu, 'Controls', () => UI.open('controls', { back: 'title' }));
       if (isElectron()) UI.button(menu, 'Quit', () => window.electronAPI.quit());
-      el('div', 'title-foot', 'v1.7 · Built with love, procedurally drawn pixels and a lot of 3D · Arrow keys / gamepad work in menus', box);
+      // Camel Studios account (top right)
+      const Acc = R.Account;
+      if (Acc && Acc.available) {
+        const chip = el('div', 'acct-chip', null, box);
+        if (Acc.signedIn) {
+          el('span', 'acct-who', `<i></i>${U.esc(Acc.label())}`, chip);
+          UI.button(chip, 'Log out', async () => { await Acc.logout(); UI.toast('Logged out'); UI.refresh(); });
+        } else {
+          UI.button(chip, 'Log in', async () => {
+            const u = await Acc.login();
+            if (u) { UI.toast(`Signed in as ${Acc.label()}`, 'good'); UI.refresh(); }
+          });
+        }
+      }
+      el('div', 'title-foot', 'v1.8 · Built with love, procedurally drawn pixels and a lot of 3D · Arrow keys / gamepad work in menus', box);
     },
     back() {},
   };
