@@ -1,7 +1,7 @@
 {
   "name": "emberfall",
   "productName": "Shattercrown",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Shattercrown: Legends of the Shattered Crown — a 2D action RPG with online co-op",
   "main": "main.js",
   "private": true,

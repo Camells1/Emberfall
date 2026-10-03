@@ -663,9 +663,9 @@
   };
   N.onAdd = function (e) { if (N.active() && N.authority && e instanceof R.Enemy && !e.nid) { e.nid = N.myId * NID + (++N.nidSeq); N.byNid.set(e.nid, e); } };
 
-  function chat(name, text) { R.UI.toast(name + ': ' + text, 'quest'); }
+  function chat(name, text) { R.UI.toast(CamelFilter.clean(name) + ': ' + CamelFilter.clean(text), 'quest'); }
   N.broadcastPvp = (m) => broadcast(Object.assign({ m: W().map.id }, m));
-  N.say = function (text) { text = String(text).slice(0, 120); if (!text) return; const name = W().player.name; broadcast({ t: 'chat', name, text }); chat(name, text); };
+  N.say = function (text) { text = CamelFilter.clean(String(text).slice(0, 120)); if (!text) return; const name = W().player.name; broadcast({ t: 'chat', name, text }); chat(name, text); };
 
   // ---------------------------------------------------------------- per-frame
   N.tick = function (dt) {

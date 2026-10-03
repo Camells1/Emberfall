@@ -20,10 +20,24 @@
     return json;
   }
 
+  // The account page sends the session back with postMessage, then closes itself
+  const SITE = 'https://camells1.github.io';
+  function webLogin() {
+    return new Promise((resolve) => {
+      const w = window.open(SITE + '/account/?app=shattercrown', 'camel-login', 'popup,width=480,height=760');
+      if (!w) { if (R.UI && R.UI.toast) R.UI.toast('Allow pop-ups for this site to log in.', 'bad'); resolve(null); return; }
+      const onMsg = (e) => { if (e.origin === SITE && e.data && e.data.type === 'camel-auth') done(e.data.data); };
+      const timer = setInterval(() => { if (w.closed) done(null); }, 600);
+      function done(d) { clearInterval(timer); window.removeEventListener('message', onMsg); resolve(d); }
+      window.addEventListener('message', onMsg);
+    });
+  }
+
   const A = R.Account = {
     user: null, // { uid, email, name, tag }
     get signedIn() { return !!A.user; },
-    get available() { return !!(window.electronAPI && window.electronAPI.account); },
+    // Desktop app: a sign-in window. Browser version (Chromebooks etc.): a pop-up from the account site.
+    get available() { return true; },
     label() { return A.user ? (A.user.name ? `${A.user.name}#${A.user.tag}` : A.user.email) : ''; },
 
     // Refresh the saved session (every launch). Resolves to the user or null.
@@ -46,8 +60,8 @@
 
     // Opens the sign-in window. Resolves to the user (or null if the window was closed).
     async login() {
-      if (!A.available) return null;
-      const data = await window.electronAPI.account.open();
+      const desk = window.electronAPI && window.electronAPI.account;
+      const data = desk ? await desk.open() : await webLogin();
       if (!data || !data.refreshToken) return null;
       write({ refreshToken: data.refreshToken, uid: data.uid, email: data.email, stay: data.stay !== false }, data.stay !== false);
       return A.restore();
@@ -55,7 +69,7 @@
 
     async logout() {
       write(null); A.user = null;
-      if (A.available) await window.electronAPI.account.logout();
+      if (window.electronAPI && window.electronAPI.account) await window.electronAPI.account.logout();
     },
   };
 

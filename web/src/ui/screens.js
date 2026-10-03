@@ -753,6 +753,14 @@
       toggle('Quest Arrow', 'guide');
       toggle('Show FPS', 'showFps', (v) => document.getElementById('fps').classList.toggle('hidden', !v));
       if (isElectron()) toggle('Fullscreen (F11)', 'fullscreen', (v) => window.electronAPI.setFullscreen(v));
+      // Browser version (Chromebooks): the browser's own fullscreen
+      else if (document.fullscreenEnabled) {
+        R.settings.fullscreen = !!document.fullscreenElement;
+        toggle('Fullscreen', 'fullscreen', (v) => {
+          if (v && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+          if (!v && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        });
+      }
       UI.button(body, '← Back', () => UI.back());
     },
   };
